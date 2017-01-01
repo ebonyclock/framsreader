@@ -1,0 +1,12 @@
+# created Fri Sep 10 23:03:08 1999
+# by Framsticks simulator v0.950 (25-Apr-99) [PC Windows]
+stats:
+strattr0: a
+str_attr_long: asdasd:A~asdaa
+str_attr_with_space: asdasd asdasd
+int_attr0: 0
+int_attr1: 123
+hex_attr0: 0x123
+hex_attr1: -0x125
+float_attr0: 12.3e+05
+float_attr1: -12.3
