@@ -1,5 +1,1 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-import numpy as np
-
+from ._read import read, parse_value
