@@ -1,18 +1,46 @@
+import re as _re
+import json
+
+
 def _deserialize(expression):
-    if expression.strip() == 'null':
-        return None
-    if expression.strip() == '':
+    stripped_exp = expression.strip()
+    if stripped_exp == '':
         # TODO msg
         raise ValueError('Empty value for "@Serialized" not allowed.')
-    # TODO numbers
-    # TODO strings
-    # TODO lists
+    if stripped_exp == 'null':
+        return None
+
+    # String in quotes
+    if _re.search('^".*"$', stripped_exp):
+        string_exp = stripped_exp[1:-1]
+        # TODO maybe support for more esscaped characters?
+        # TODO maybe throw when " is not escaped?
+        # TODO check if it really does what's si[[supposed to
+        string_exp = _re.sub('\\\\t', '\t', string_exp)
+        string_exp = _re.sub('\\\\"', '"', string_exp)
+        string_exp = _re.sub('\\\\n', '\n', string_exp)
+        return string_exp
+    # Lists
+    if _re.search('^\[.*\]$', stripped_exp):
+        if stripped_exp[1:-1].strip() == "":
+            return []
+        list_exp = [_deserialize(x.strip()) for x in stripped_exp[1:-1].split(",")]
+        return list_exp
+
+    # Dicts:
+    # TODO won't work for nested dicts and lists
+    if _re.search('^{.*}$', stripped_exp):
+        dictionary = dict()
+        for pair in stripped_exp[1:-1].split(','):
+            k, v = pair.split(":")
+            dictionary[_deserialize(k)] = _deserialize(v)
+        return dictionary
     # TODO dicts
     # TODO wutnot
-    raise NotImplementedError()
+    # raise NotImplementedError()
 
     # String
-    return exp
+    return parse_value(expression)
 
 
 def parse_value(value):

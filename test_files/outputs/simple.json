@@ -9,6 +9,8 @@
     "hex_attr0": 291,
     "hex_attr1": -293,
     "float_attr0": 12.3e+05,
-    "float_attr1": -12.3
+    "float_attr1": -12.3,
+    "serialized_field0": "\"",
+    "serialized_field1": "\t"
   }
 ]

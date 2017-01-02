@@ -20,14 +20,22 @@ parser_testcases = [
     ('a', 'a'),
     ('generic string ~ with tylda', 'generic string ~ with tylda'),
     ('123', 123),
-    ('0x123', 291),
+    ('0x123', 0x123),
     ('-0x125', -0x125),
     ('-12.3', -12.3),
     ('12.3e+05', 12.3e+05),
     ('@Serialized:null', None),
     ('@Serialized: null', None),
     ('@Serialized:"@Serialized:"', '@Serialized:'),
-
+    ('@Serialized:"\\t"', '\t'),
+    ('@Serialized:"\\n"', '\n'),
+    ('@Serialized:"\\""', '"'),
+    ('@Serialized:1', 1),
+    ('@Serialized:2.1', 2.1),
+    ('@Serialized:[+0X10, null, "abc"] ', [16, None, "abc"]),
+    ('@Serialized:[[[]]]', [[[]]]),
+    ('@Serialized:{"a":123,"b":2 }', {"a": 123, "b": 2}),
+    ('@Serialized:{"a":123,"b":[1,2,3] }', {"a": 123, "b": [1,2,3]})
 ]
 
 parser_exception_testcases = [
