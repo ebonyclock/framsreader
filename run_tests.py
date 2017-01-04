@@ -107,6 +107,19 @@ class ReferenceTest(unittest.TestCase):
         self.assertTrue(result[2] is result[0][1])
         self.assertTrue(result[1][1] is result)
 
+    def test4(self):
+        str_in = '@Serialized:{"a":[33,44],"b":^1,"c":[33,44]}'
+        result = fr.parse_property(str_in)
+        self.assertTrue(isinstance(result, dict))
+        self.assertEqual(len(result), 3)
+        self.assertListEqual(sorted(result.keys()), ["a", "b", "c"])
+
+        self.assertEqual(result["a"], [33, 44])
+        self.assertEqual(result["c"], [33, 44])
+
+        self.assertFalse(result["c"] is result["a"])
+        self.assertTrue(result["b"], result["a"])
+
 
 class ParseValueTest(unittest.TestCase):
     @parameterized.expand(parser_testcases)
