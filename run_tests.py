@@ -69,6 +69,7 @@ loads_exception_testcases = [
 ]
 
 
+# TODO make more atomic tests, maybe
 class ReferenceTest(unittest.TestCase):
     def test0(self):
         str_in = '@Serialized:[^0] '

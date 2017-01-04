@@ -12,6 +12,17 @@ ESCAPED_NEWLINE_REGEX = '\\\\n'
 ESCAPED_TYLDA_REGEX = '\\\\~'
 
 
+def _parse_simple_value(value):
+    assert isinstance(value, str)
+    try:
+        parsed_number = _str_to_number(value)
+        return parsed_number
+    except ValueError:
+        pass
+
+    return value.strip()
+
+
 def _str_to_number(s):
     assert isinstance(s, str)
     s = s.strip()
@@ -31,28 +42,53 @@ def _str_to_number(s):
     raise ValueError()
 
 
-def _parse_simple_value(value):
-    assert isinstance(value, str)
-    try:
-        parsed_number = _str_to_number(value)
-        return parsed_number
-    except ValueError:
-        pass
-
-    return value.strip()
-
-
 def parse_property(str_property):
     assert isinstance(str_property, str)
     if str_property.startswith("@Serialized:"):
         prop = str_property.split(":", 1)[1]
-        prop = _deserialize(prop)
+        prop = deserialize(prop)
         return prop
     else:
         return _parse_simple_value(str_property)
 
 
-def _deserialize(expression):
+def extract_string(exp):
+    exp = exp[1:]
+    str_end_match = _re.search(QUOTE_REGEX, exp)
+    if str_end_match is None:
+        # TODO msg
+        raise ValueError()
+    str_end = str_end_match.span()[0]
+    s = exp[:str_end]
+    reminder = exp[str_end + 1:]
+    s = _re.sub(ESCAPED_QUOTE_REGEX, '"', s)
+    s = _re.sub(ESCAPED_TAB_REGEX, '\t', s)
+    s = _re.sub(ESCAPED_NEWLINE_REGEX, '\n', s)
+    return s, reminder
+
+
+def extract_number(exp):
+    match = _re.match(NUMBER_REGEX, exp)
+    number_as_str = match.group()
+    reminder = exp[match.span()[1]:]
+    number = _str_to_number(number_as_str)
+    return number, reminder
+
+
+def extract_reference(exp):
+    exp = exp[1:].strip()
+    i_match = _re.match(NATURAL_REGEX, exp)
+    if i_match is None:
+        # TODO msg
+        raise ValueError()
+    else:
+        end_i = i_match.span()[1]
+        ref_index = int(exp[:end_i])
+        reminder = exp[end_i:]
+    return ref_index, reminder
+
+
+def deserialize(expression):
     stripped_exp = expression.strip()
     if stripped_exp == '':
         # TODO msg
@@ -121,46 +157,18 @@ def _deserialize(expression):
             current_object = dict()
             opened_dicts += 1
             exp = exp[1:]
-        # String
-        # TODO move to separate function
         elif exp[0] == '"':
-            exp = exp[1:]
-            str_end_match = _re.search(QUOTE_REGEX, exp)
-            if str_end_match is None:
-                # TODO msg
-                raise ValueError()
-            str_end = str_end_match.span()[0]
-            s = exp[:str_end]
-            exp = exp[str_end + 1:]
-            s = _re.sub(ESCAPED_QUOTE_REGEX, '"', s)
-            s = _re.sub(ESCAPED_TAB_REGEX, '\t', s)
-            s = _re.sub(ESCAPED_NEWLINE_REGEX, '\n', s)
-            current_object = s
-        # NUMBER
-        # TODO move to separate function
+            current_object, exp = extract_string(exp)
         elif _re.match(NUMBER_REGEX, exp) is not None:
-            match = _re.match(NUMBER_REGEX, exp)
-            number_as_str = match.group()
-            exp = exp[match.span()[1]:]
-            current_object = _str_to_number(number_as_str)
+            current_object, exp = extract_number(exp)
         # TODO move to separate function
         elif exp[0] == '^':
-            exp = exp[1:].strip()
-            i_match = _re.match(NATURAL_REGEX, exp)
-            if i_match is None:
+            i, exp = extract_reference(exp)
+            if i >= len(references):
                 # TODO msg
                 raise ValueError()
-            else:
-                end_i = i_match.span()[1]
-                i = int(exp[:end_i])
-                exp = exp[end_i:]
-                if i >= len(references):
-                    # TODO msg
-                    raise ValueError()
-                else:
-                    # TODO redo
-                    current_object = references[i]
-                    current_object_is_reference = True
+            current_object = references[i]
+            current_object_is_reference = True
 
         elif exp[0] == '<':
             # TODO nonserializable objects
