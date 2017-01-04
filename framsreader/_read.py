@@ -10,6 +10,7 @@ ESCAPED_TAB_REGEX = '\\\\t'
 ESCAPED_NEWLINE_REGEX = '\\\\n'
 ESCAPED_TYLDA_REGEX = '\\\\~'
 
+
 def _str_to_number(s):
     assert isinstance(s, str)
     s = s.strip()
@@ -117,7 +118,7 @@ def _deserialize(expression):
                 raise ValueError()
             str_end = str_end_match.span()[0]
             s = exp[:str_end]
-            exp = exp[str_end+1:]
+            exp = exp[str_end + 1:]
             s = _re.sub(ESCAPED_QUOTE_REGEX, '"', s)
             s = _re.sub(ESCAPED_TAB_REGEX, '\t', s)
             s = _re.sub(ESCAPED_NEWLINE_REGEX, '\n', s)

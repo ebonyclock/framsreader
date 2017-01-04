@@ -59,10 +59,12 @@ parser_exception_testcases = [
 ]
 
 loads_testcases = [
-    ('class:\nmlprop:~\nbla bla bla\n~\n', [{"class": "class", "mlprop": "bla bla bla\n"}])
+    ('class:\nmlprop:~\nbla bla bla\n~\n', [{"class": "class", "mlprop": "bla bla bla\n"}]),
+    ('class:\nmlprop:~\n\\~\n~\n', [{"class": "class", "mlprop": "~\n"}])
 ]
 loads_exception_testcases = [
-
+    'class:\nmlprop:~\n\\~\n~\nasdasd',
+    'class:\nmlprop:~\n~\n~\n'
 ]
 
 
@@ -86,19 +88,19 @@ class TestLoads(unittest.TestCase):
         self.assertRaises(ValueError, fr.loads, input_val)
 
 
-# class TestLoad(unittest.TestCase):
-#     @parameterized.expand(all_input_files)
-#     def test_correct_load(self, filename):
-#         file_path = os.path.join(input_files_root, filename)
-#         json_path = os.path.join(output_files_root, filename.split(".")[0] + ".json")
-#         with self.subTest(i=file_path):
-#             result = sorted(fr.laod(file_path))
-#             with open(json_path) as json_file:
-#                 correct = sorted(json.load(json_file))
-#             self.assertEqual(len(result), len(correct))
-#             # self.assertListEqual(result, correct)
-#             for r, c in zip(result, correct):
-#                 self.assertDictEqual(r, c)
+class TestLoad(unittest.TestCase):
+    @parameterized.expand(all_input_files)
+    def test_correct_load(self, filename):
+        file_path = os.path.join(input_files_root, filename)
+        json_path = os.path.join(output_files_root, filename.split(".")[0] + ".json")
+        with self.subTest(i=file_path):
+            result = sorted(fr.laod(file_path))
+            with open(json_path) as json_file:
+                correct = sorted(json.load(json_file))
+            self.assertEqual(len(result), len(correct))
+            # self.assertListEqual(result, correct)
+            for r, c in zip(result, correct):
+                self.assertDictEqual(r, c)
 
 
 if __name__ == '__main__':

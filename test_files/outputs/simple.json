@@ -11,6 +11,8 @@
     "float_attr0": 12.3e+05,
     "float_attr1": -12.3,
     "serialized_field0": "\"",
-    "serialized_field1": "\t"
+    "serialized_field1": "\t",
+    "multline_field0": "qwe\nasd\n",
+    "multline_field1": "qwe\nasd~\n"
   }
 ]

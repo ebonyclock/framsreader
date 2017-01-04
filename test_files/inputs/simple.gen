@@ -12,3 +12,11 @@ float_attr0: 12.3e+05
 float_attr1: -12.3
 serialized_field0:@Serialized:"\""
 serialized_field1:@Serialized:"\t"
+multline_field0:~
+qwe
+asd
+~
+multline_field1:~
+qwe
+asd\~
+~
