@@ -257,7 +257,7 @@ def loads(s, *args, **kwargs):
                         # TODO maybe raise error when something's after classname
                         # if suffix !="":
                         #     raise ValueError()
-                        current_object = {"class": class_name}
+                        current_object = {"_classname": class_name}
                         objects.append(current_object)
                         continue
 

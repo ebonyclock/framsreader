@@ -61,8 +61,8 @@ parser_exception_testcases = [
 ]
 
 loads_testcases = [
-    ('class:\nmlprop:~\nbla bla bla\n~\n', [{"class": "class", "mlprop": "bla bla bla\n"}]),
-    ('class:\nmlprop:~\n\\~\n~\n', [{"class": "class", "mlprop": "~\n"}])
+    ('class:\nmlprop:~\nbla bla bla\n~\n', [{"_classname": "class", "mlprop": "bla bla bla\n"}]),
+    ('class:\nmlprop:~\n\\~\n~\n', [{"_classname": "class", "mlprop": "~\n"}])
 ]
 loads_exception_testcases = [
     'class:\nmlprop:~\n\\~\n~\nasdasd',
