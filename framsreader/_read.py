@@ -160,51 +160,58 @@ def _deserialize(expression):
     return main_object
 
 
-def read(filename, *args, **kwargs):
+def loads(s, *args, **kwargs):
+    lines = s.split("\n")
+    multiline_value = None
+    current_object = None
     objects = []
-    with open(filename) as file:
-        multiline_value = None
-        current_object = None
-
-        for line_num, line in enumerate(file):
-            try:
-                if multiline_value:
-                    # TODO append
-                    # TODO check if \~ is there
-                    # TODO check if ~ is there
-                    raise NotImplementedError()
-                elif line.startswith("#"):
-                    continue
+    for line_num, line in enumerate(lines):
+        try:
+            if multiline_value:
+                # TODO append
+                # TODO check if \~ is there
+                # TODO check if ~ is there
+                raise NotImplementedError()
+            elif line.startswith("#"):
+                continue
+            else:
+                line = line.strip()
+                if current_object is not None:
+                    if line == "":
+                        current_object = None
+                        continue
                 else:
-                    line = line.strip()
-                    if current_object is not None:
-                        if line == "":
-                            current_object = None
-                            continue
+                    if ":" in line:
+                        class_name, suffix = line.split(":", 1)
+                        # TODO maybe throw when multiple colons?
+                        # if suffix !="":
+                        #     raise RuntimeError()
+                        current_object = {"class": class_name}
+                        objects.append(current_object)
+                        continue
+                # Ignores the comment line
+
+
+                if current_object is not None:
+                    key, value = line.split(":", 1)
+
+                    if multiline_value and "~" in value and not "\~" in value:
+                        multiline_value = ""
+                        # TODO should this be checked also when not in multiline value?
+                        # TODO start multiline prop
+                        raise NotImplementedError()
                     else:
-                        if ":" in line:
-                            class_name, suffix = line.split(":", 1)
-                            # TODO maybe throw when multiple colons?
-                            # if suffix !="":
-                            #     raise RuntimeError()
-                            current_object = {"class": class_name}
-                            objects.append(current_object)
-                            continue
-                    # Ignores the comment line
+                        current_object[key] = parse_property(value)
 
+        except RuntimeError:
+            # TODO better message?
+            raise RuntimeError("Error parsing {}. Wrong syntax in line {}.".format(filename, line_num))
 
-                    if current_object is not None:
-                        key, value = line.split(":", 1)
-
-                        if multiline_value and "~" in value and not "\~" in value:
-                            multiline_value = ""
-                            # TODO should this be checked also when not in multiline value?
-                            # TODO start multiline prop
-                            raise NotImplementedError()
-                        else:
-                            current_object[key] = parse_property(value)
-
-            except RuntimeError:
-                # TODO better message?
-                raise RuntimeError("Error parsing {}. Wrong syntax in line {}.".format(filename, line_num))
     return objects
+
+
+def laod(filename, *args, **kwargs):
+    file = open(filename)
+    s = file.read()
+    file.close()
+    return loads(s, *args, **kwargs)

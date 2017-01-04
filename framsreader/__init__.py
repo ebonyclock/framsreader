@@ -1,1 +1,1 @@
-from ._read import read, parse_property
+from ._read import laod, parse_property

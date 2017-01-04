@@ -75,7 +75,7 @@ class TestFramsRead(unittest.TestCase):
         file_path = os.path.join(input_files_root, filename)
         json_path = os.path.join(output_files_root, filename.split(".")[0] + ".json")
         with self.subTest(i=file_path):
-            result = sorted(fr.read(file_path))
+            result = sorted(fr.laod(file_path))
             with open(json_path) as json_file:
                 correct = sorted(json.load(json_file))
             self.assertEqual(len(result), len(correct))
