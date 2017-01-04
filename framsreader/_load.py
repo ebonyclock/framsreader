@@ -198,8 +198,8 @@ def loads(s, *args, **kwargs):
                     current_object[multiline_key] = multiline_value
                     multiline_value = None
                     multiline_key = None
-            # TODO raise error when trailing ~ is not found
-            # Ignores the comment line
+
+            # Ignores comment lines (if outside multiline prop)
             elif line.startswith("#"):
                 continue
             else:

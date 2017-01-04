@@ -10,8 +10,8 @@ test_files_root = "test_files"
 input_files_root = os.path.join(test_files_root, "inputs")
 output_files_root = os.path.join(test_files_root, "outputs")
 
-# gen_input_files = [f for f in os.listdir(input_files_root) if f.endswith(".gen")]
-gen_input_files = ["simple.gen"]
+gen_input_files = [f for f in os.listdir(input_files_root) if f.endswith(".gen")]
+# gen_input_files = ["demo-chase.gen"]
 all_input_files = gen_input_files
 
 parser_testcases = [
@@ -64,7 +64,8 @@ loads_testcases = [
 ]
 loads_exception_testcases = [
     'class:\nmlprop:~\n\\~\n~\nasdasd',
-    'class:\nmlprop:~\n~\n~\n'
+    'class:\nmlprop:~\n~\n~\n',
+    'class:\nmlprop:~\n'
 ]
 
 
@@ -94,9 +95,9 @@ class TestLoad(unittest.TestCase):
         file_path = os.path.join(input_files_root, filename)
         json_path = os.path.join(output_files_root, filename.split(".")[0] + ".json")
         with self.subTest(i=file_path):
-            result = sorted(fr.load(file_path))
+            result = fr.load(file_path)
             with open(json_path) as json_file:
-                correct = sorted(json.load(json_file))
+                correct = json.load(json_file)
             self.assertEqual(len(result), len(correct))
             # self.assertListEqual(result, correct)
             for r, c in zip(result, correct):
