@@ -1,10 +1,14 @@
 import re as _re
-import json
 
 INT_FLOAT_REGEX = r'([+|-]?(?:0|[1-9]\d*))(\.\d+)?([eE][-+]?\d+)?'
 HEX_NUMBER_REGEX = r'[+|-]?0[xX][\da-fA-F]*'
 NUMBER_REGEX = '({}|{})'.format(HEX_NUMBER_REGEX, INT_FLOAT_REGEX)
-
+TYLDA_REGEX = '(?<![\\\\])(~)'
+QUOTE_REGEX = '(?<![\\\\])(")'
+ESCAPED_QUOTE_REGEX = '\\\\"'
+ESCAPED_TAB_REGEX = '\\\\t'
+ESCAPED_NEWLINE_REGEX = '\\\\n'
+ESCAPED_TYLDA_REGEX = '\\\\~'
 
 def _str_to_number(s):
     assert isinstance(s, str)
@@ -59,7 +63,6 @@ def _deserialize(expression):
     objects = []
     main_object_determined = False
     main_object = None
-    current_object = None
     expect_dict_value = False
     last_dict_key = None
     exp = stripped_exp
@@ -107,16 +110,17 @@ def _deserialize(expression):
                 continue
         # String
         elif exp[0] == '"':
-            str_end_match = _re.search('[^\\\\](")', exp)
+            exp = exp[1:]
+            str_end_match = _re.search(QUOTE_REGEX, exp)
             if str_end_match is None:
                 # TODO message
                 raise ValueError()
-            str_end = str_end_match.span()[1] - 1
-            s = exp[1:str_end]
-            exp = exp[str_end + 1:]
-            s = _re.sub('\\\\"', '"', s)
-            s = _re.sub('\\\\t', '\t', s)
-            s = _re.sub('\\\\n', '\n', s)
+            str_end = str_end_match.span()[0]
+            s = exp[:str_end]
+            exp = exp[str_end+1:]
+            s = _re.sub(ESCAPED_QUOTE_REGEX, '"', s)
+            s = _re.sub(ESCAPED_TAB_REGEX, '\t', s)
+            s = _re.sub(ESCAPED_NEWLINE_REGEX, '\n', s)
             current_object = s
 
         elif exp.startswith("null"):
@@ -161,17 +165,40 @@ def _deserialize(expression):
 
 
 def loads(s, *args, **kwargs):
+    assert isinstance(s, str)
     lines = s.split("\n")
     multiline_value = None
+    multiline_key = None
     current_object = None
     objects = []
+    parsing_error = False
     for line_num, line in enumerate(lines):
         try:
-            if multiline_value:
-                # TODO append
-                # TODO check if \~ is there
-                # TODO check if ~ is there
-                raise NotImplementedError()
+            if multiline_key is not None:
+                endmatch = _re.search(TYLDA_REGEX, line)
+                # print(line)
+                if endmatch is not None:
+                    endi = endmatch.span()[0]
+                    value = line[0:endi]
+                    reminder = line[endi + 1:].strip()
+                    if reminder != "":
+                        # TODO msg
+                        raise ValueError()
+                else:
+                    value = line + "\n"
+
+                if _re.search(TYLDA_REGEX, value) is not None:
+                    # TODO msg
+                    raise ValueError()
+                # TODO this regex catches newline somhow
+                value = _re.sub(ESCAPED_TYLDA_REGEX, '~', value)
+                multiline_value += value
+                if endmatch is not None:
+                    current_object[multiline_key] = multiline_value
+                    multiline_value = None
+                    multiline_key = None
+            # TODO raise error when trailing ~ is not found
+            # Ignores the comment line
             elif line.startswith("#"):
                 continue
             else:
@@ -189,23 +216,25 @@ def loads(s, *args, **kwargs):
                         current_object = {"class": class_name}
                         objects.append(current_object)
                         continue
-                # Ignores the comment line
-
 
                 if current_object is not None:
                     key, value = line.split(":", 1)
-
-                    if multiline_value and "~" in value and not "\~" in value:
+                    if value.strip() == "~":
                         multiline_value = ""
-                        # TODO should this be checked also when not in multiline value?
-                        # TODO start multiline prop
-                        raise NotImplementedError()
+                        multiline_key = key
                     else:
                         current_object[key] = parse_property(value)
 
-        except RuntimeError:
-            # TODO better message?
-            raise RuntimeError("Error parsing {}. Wrong syntax in line {}.".format(filename, line_num))
+        except ValueError:
+            raise ValueError()
+            parsing_error = True
+            break
+    if multiline_key is not None:
+        # TODO msg
+        raise ValueError()
+    if parsing_error:
+        # TODO better message?
+        raise ValueError("Parsing error. Incorrect syntax in line {}:\n{}".format(line_num, line))
 
     return objects
 

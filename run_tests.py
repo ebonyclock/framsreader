@@ -58,6 +58,13 @@ parser_exception_testcases = [
     '@Serialized:   '
 ]
 
+loads_testcases = [
+    ('class:\nmlprop:~\nbla bla bla\n~\n', [{"class": "class", "mlprop": "bla bla bla\n"}])
+]
+loads_exception_testcases = [
+
+]
+
 
 class TestParseValue(unittest.TestCase):
     @parameterized.expand(parser_testcases)
@@ -69,19 +76,29 @@ class TestParseValue(unittest.TestCase):
         self.assertRaises(ValueError, fr.parse_property, input_val)
 
 
-class TestFramsRead(unittest.TestCase):
-    @parameterized.expand(all_input_files)
-    def test_parse_from_file(self, filename):
-        file_path = os.path.join(input_files_root, filename)
-        json_path = os.path.join(output_files_root, filename.split(".")[0] + ".json")
-        with self.subTest(i=file_path):
-            result = sorted(fr.laod(file_path))
-            with open(json_path) as json_file:
-                correct = sorted(json.load(json_file))
-            self.assertEqual(len(result), len(correct))
-            # self.assertListEqual(result, correct)
-            for r, c in zip(result, correct):
-                self.assertDictEqual(r, c)
+class TestLoads(unittest.TestCase):
+    @parameterized.expand(loads_testcases)
+    def test_correct_loads(self, input_val, output):
+        self.assertEqual(output, fr.loads(input_val))
+
+    @parameterized.expand(loads_exception_testcases)
+    def test_load_exceptions(self, input_val):
+        self.assertRaises(ValueError, fr.loads, input_val)
+
+
+# class TestLoad(unittest.TestCase):
+#     @parameterized.expand(all_input_files)
+#     def test_correct_load(self, filename):
+#         file_path = os.path.join(input_files_root, filename)
+#         json_path = os.path.join(output_files_root, filename.split(".")[0] + ".json")
+#         with self.subTest(i=file_path):
+#             result = sorted(fr.laod(file_path))
+#             with open(json_path) as json_file:
+#                 correct = sorted(json.load(json_file))
+#             self.assertEqual(len(result), len(correct))
+#             # self.assertListEqual(result, correct)
+#             for r, c in zip(result, correct):
+#                 self.assertDictEqual(r, c)
 
 
 if __name__ == '__main__':
