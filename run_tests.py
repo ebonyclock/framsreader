@@ -69,7 +69,45 @@ loads_exception_testcases = [
 ]
 
 
-class TestParseValue(unittest.TestCase):
+class ReferenceTest(unittest.TestCase):
+    def test0(self):
+        str_in = '@Serialized:[^0] '
+        result = fr.parse_property(str_in)
+        self.assertTrue(isinstance(result, list))
+        self.assertEqual(len(result), 1)
+        self.assertTrue(result is result[0])
+
+    def test1(self):
+        str_in = '@Serialized:[44,[^1]]'
+        result = fr.parse_property(str_in)
+        self.assertTrue(isinstance(result, list))
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0], 44)
+        self.assertTrue(result[1] is result[1][0])
+
+    def test2(self):
+        str_in = '@Serialized:[[100],["abc"],[300,^2]]'
+        result = fr.parse_property(str_in)
+        self.assertTrue(isinstance(result, list))
+        self.assertEqual(len(result), 3)
+        self.assertEqual(result[0], [100])
+        self.assertEqual(result[1], ["abc"])
+        self.assertEqual(result[2][0], 300)
+        self.assertTrue(result[2][1] is result[1])
+
+    def test3(self):
+        str_in = '@Serialized:[[123,[]],["x",^0],^2]'
+        result = fr.parse_property(str_in)
+        self.assertTrue(isinstance(result, list))
+        self.assertEqual(len(result), 3)
+        self.assertEqual(result[0], [123, []])
+        self.assertTrue(isinstance(result[1], list))
+        self.assertEqual(result[1][0], "x")
+        self.assertTrue(result[2] is result[0][1])
+        self.assertTrue(result[1][1] is result)
+
+
+class ParseValueTest(unittest.TestCase):
     @parameterized.expand(parser_testcases)
     def test_correct_parsing(self, input_val, output):
         self.assertEqual(output, fr.parse_property(input_val))
@@ -79,7 +117,7 @@ class TestParseValue(unittest.TestCase):
         self.assertRaises(ValueError, fr.parse_property, input_val)
 
 
-class TestLoads(unittest.TestCase):
+class LoadsTest(unittest.TestCase):
     @parameterized.expand(loads_testcases)
     def test_correct_loads(self, input_val, output):
         self.assertEqual(output, fr.loads(input_val))
@@ -89,7 +127,7 @@ class TestLoads(unittest.TestCase):
         self.assertRaises(ValueError, fr.loads, input_val)
 
 
-class TestLoad(unittest.TestCase):
+class LoadTest(unittest.TestCase):
     @parameterized.expand(all_input_files)
     def test_correct_load(self, filename):
         file_path = os.path.join(input_files_root, filename)

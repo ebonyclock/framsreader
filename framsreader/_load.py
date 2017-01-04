@@ -1,6 +1,7 @@
 import re as _re
 
 INT_FLOAT_REGEX = r'([+|-]?(?:0|[1-9]\d*))(\.\d+)?([eE][-+]?\d+)?'
+NATURAL_REGEX = r'(?:0|[1-9]\d*)'
 HEX_NUMBER_REGEX = r'[+|-]?0[xX][\da-fA-F]*'
 NUMBER_REGEX = '({}|{})'.format(HEX_NUMBER_REGEX, INT_FLOAT_REGEX)
 TYLDA_REGEX = '(?<![\\\\])(~)'
@@ -62,13 +63,17 @@ def _deserialize(expression):
         return None
 
     objects = []
+    references = []
     main_object_determined = False
     main_object = None
     expect_dict_value = False
     last_dict_key = None
     exp = stripped_exp
+    opened_lists = 0
+    opened_dicts = 0
 
     while len(exp) > 0:
+        current_object_is_reference = False
         if main_object_determined and len(objects) == 0:
             # TODO msg
             raise ValueError()
@@ -85,23 +90,18 @@ def _deserialize(expression):
                 raise ValueError()
             else:
                 exp = exp[1:].strip()
-        # List start
-        if exp[0] == "[":
-            current_object = list()
-            exp = exp[1:]
-        elif exp[0] == "{":
-            current_object = dict()
-            exp = exp[1:]
-        elif exp[0] == "]":
+
+        if exp[0] == "]":
             if not isinstance(objects[-1], list):
                 # TODO msg
                 raise ValueError()
             else:
+                opened_lists -= 1
                 objects.pop()
                 exp = exp[1:].strip()
                 continue
-
         elif exp[0] == "}":
+            opened_dicts -= 1
             if not isinstance(objects[-1], dict):
                 # TODO msg
                 raise ValueError()
@@ -109,12 +109,25 @@ def _deserialize(expression):
                 objects.pop()
                 exp = exp[1:].strip()
                 continue
+        # List start
+        elif exp.startswith("null"):
+            current_object = None
+            exp = exp[4:]
+        elif exp[0] == "[":
+            current_object = list()
+            opened_lists += 1
+            exp = exp[1:]
+        elif exp[0] == "{":
+            current_object = dict()
+            opened_dicts += 1
+            exp = exp[1:]
         # String
+        # TODO move to separate function
         elif exp[0] == '"':
             exp = exp[1:]
             str_end_match = _re.search(QUOTE_REGEX, exp)
             if str_end_match is None:
-                # TODO message
+                # TODO msg
                 raise ValueError()
             str_end = str_end_match.span()[0]
             s = exp[:str_end]
@@ -123,21 +136,38 @@ def _deserialize(expression):
             s = _re.sub(ESCAPED_TAB_REGEX, '\t', s)
             s = _re.sub(ESCAPED_NEWLINE_REGEX, '\n', s)
             current_object = s
-
-        elif exp.startswith("null"):
-            current_object = None
-            exp = exp[4:]
         # NUMBER
-        # Maybe check if alfanumeric or sumthing?
+        # TODO move to separate function
         elif _re.match(NUMBER_REGEX, exp) is not None:
             match = _re.match(NUMBER_REGEX, exp)
             number_as_str = match.group()
             exp = exp[match.span()[1]:]
             current_object = _str_to_number(number_as_str)
+        # TODO move to separate function
+        elif exp[0] == '^':
+            exp = exp[1:].strip()
+            i_match = _re.match(NATURAL_REGEX, exp)
+            if i_match is None:
+                # TODO msg
+                raise ValueError()
+            else:
+                end_i = i_match.span()[1]
+                i = int(exp[:end_i])
+                exp = exp[end_i:]
+                if i >= len(references):
+                    # TODO msg
+                    raise ValueError()
+                else:
+                    # TODO redo
+                    current_object = references[i]
+                    current_object_is_reference = True
 
+        elif exp[0] == '<':
+            # TODO nonserializable objects
+            raise NotImplementedError()
         else:
-            # TODO some other object types?
-            raise ValueError()
+            # TODO custom objects
+            raise NotImplementedError()
 
         if len(objects) > 0:
             if isinstance(objects[-1], list):
@@ -148,19 +178,27 @@ def _deserialize(expression):
                     last_dict_key = None
                     expect_dict_value = False
                 else:
+                    if not isinstance(current_object, str):
+                        # TODO msg
+                        raise ValueError()
                     last_dict_key = current_object
                     expect_dict_value = True
         # TODO support for other types of objects?
-        if isinstance(current_object, (list, dict)):
+        if isinstance(current_object, (list, dict)) and not current_object_is_reference:
             objects.append(current_object)
-
+            references.append(current_object)
         if not main_object_determined:
             main_object_determined = True
             main_object = current_object
         exp = exp.strip()
 
-    # raise NotImplementedError()
-
+    # TODO check why this check is necessary
+    if opened_lists != 0:
+        # TODO msg
+        raise ValueError()
+    if opened_dicts != 0:
+        # TODO msg
+        raise ValueError()
     # String
     return main_object
 
@@ -177,7 +215,6 @@ def loads(s, *args, **kwargs):
         try:
             if multiline_key is not None:
                 endmatch = _re.search(TYLDA_REGEX, line)
-                # print(line)
                 if endmatch is not None:
                     endi = endmatch.span()[0]
                     value = line[0:endi]
@@ -191,7 +228,6 @@ def loads(s, *args, **kwargs):
                 if _re.search(TYLDA_REGEX, value) is not None:
                     # TODO msg
                     raise ValueError()
-                # TODO this regex catches newline somhow
                 value = _re.sub(ESCAPED_TYLDA_REGEX, '~', value)
                 multiline_value += value
                 if endmatch is not None:
@@ -211,9 +247,9 @@ def loads(s, *args, **kwargs):
                 else:
                     if ":" in line:
                         class_name, suffix = line.split(":", 1)
-                        # TODO maybe throw when multiple colons?
+                        # TODO maybe raise error when something's after classname
                         # if suffix !="":
-                        #     raise RuntimeError()
+                        #     raise ValueError()
                         current_object = {"class": class_name}
                         objects.append(current_object)
                         continue
@@ -224,6 +260,7 @@ def loads(s, *args, **kwargs):
                         multiline_value = ""
                         multiline_key = key
                     else:
+                        # TODO should properties be unique?
                         current_object[key] = parse_property(value)
 
         except ValueError:
@@ -234,7 +271,6 @@ def loads(s, *args, **kwargs):
         # TODO msg
         raise ValueError()
     if parsing_error:
-        # TODO better message?
         raise ValueError("Parsing error. Incorrect syntax in line {}:\n{}".format(line_num, line))
 
     return objects
