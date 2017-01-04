@@ -240,7 +240,7 @@ def loads(s, *args, **kwargs):
     return objects
 
 
-def laod(filename, *args, **kwargs):
+def load(filename, *args, **kwargs):
     file = open(filename)
     s = file.read()
     file.close()
