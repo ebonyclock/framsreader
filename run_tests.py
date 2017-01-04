@@ -51,7 +51,9 @@ parser_testcases = [
     ('@Serialized:{}', {}),
     ('@Serialized:{"a":123 }', {"a": 123}),
     ('@Serialized:{"a":123,"b":2 }', {"a": 123, "b": 2}),
-    ('@Serialized:{"a":123,"b":[1,2,3] }', {"a": 123, "b": [1, 2, 3]})
+    ('@Serialized:{"a":123,"b":[1,2,3] }', {"a": 123, "b": [1, 2, 3]}),
+    # TODO
+    # ('@Serialized:Population<0x85f53a8>', ???)
 ]
 
 parser_exception_testcases = [
@@ -119,6 +121,14 @@ class ReferenceTest(unittest.TestCase):
 
         self.assertFalse(result["c"] is result["a"])
         self.assertTrue(result["b"], result["a"])
+
+    def test5(self):
+        str_in = '@Serialized:[null, null, [1, 2], null, ^ 1]'
+        result = fr.parse_property(str_in)
+        self.assertTrue(isinstance(result, list))
+        self.assertEqual(len(result), 5)
+        self.assertListEqual(result[0:4], [None, None, [1, 2], None])
+        self.assertTrue(result[2] is result[4])
 
 
 class ParseValueTest(unittest.TestCase):

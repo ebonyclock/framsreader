@@ -100,6 +100,7 @@ def deserialize(expression):
 
     objects = []
     references = []
+    current_object_is_custom = False
     main_object_determined = False
     main_object = None
     expect_dict_value = False
@@ -200,14 +201,12 @@ def deserialize(expression):
             main_object = current_object
         exp = exp.strip()
 
-    # TODO check why this check is necessary
     if opened_lists != 0:
         # TODO msg
         raise ValueError()
     if opened_dicts != 0:
         # TODO msg
         raise ValueError()
-    # String
     return main_object
 
 
