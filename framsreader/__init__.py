@@ -1,1 +1,1 @@
-from ._read import read, parse_value
+from ._read import read, parse_property

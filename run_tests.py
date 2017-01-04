@@ -21,21 +21,37 @@ parser_testcases = [
     ('generic string ~ with tylda', 'generic string ~ with tylda'),
     ('123', 123),
     ('0x123', 0x123),
+    ('0X123', 0x123),
+    ('+0X10', 16),
     ('-0x125', -0x125),
+    ('-0xaa', -0xaa),
+    ('0xaa', 0xaa),
+    ('0xAA', 0xaa),
     ('-12.3', -12.3),
     ('12.3e+05', 12.3e+05),
     ('@Serialized:null', None),
     ('@Serialized: null', None),
     ('@Serialized:"@Serialized:"', '@Serialized:'),
+    ('@Serialized:"\\""', '"'),
     ('@Serialized:"\\t"', '\t'),
     ('@Serialized:"\\n"', '\n'),
-    ('@Serialized:"\\""', '"'),
     ('@Serialized:1', 1),
     ('@Serialized:2.1', 2.1),
-    ('@Serialized:[+0X10, null, "abc"] ', [16, None, "abc"]),
+    ('@Serialized:+2.1', 2.1),
+    ('@Serialized:-2.1', -2.1),
+    ('@Serialized: +0X10  ', 16),
+    ('@Serialized: 0X10  ', 16),
+    ('@Serialized: 0XAA  ', 0xaa),
+    ('@Serialized: 0Xaa  ', 0xaa),
+    ('@Serialized:[]', []),
+    ('@Serialized:[1,2,3]', [1, 2, 3]),
+    ('@Serialized: [ +0X10 ] ', [16]),
+    ('@Serialized:[ +0X10, null, "abc"] ', [16, None, "abc"]),
     ('@Serialized:[[[]]]', [[[]]]),
+    ('@Serialized:{}', {}),
+    ('@Serialized:{"a":123 }', {"a": 123}),
     ('@Serialized:{"a":123,"b":2 }', {"a": 123, "b": 2}),
-    ('@Serialized:{"a":123,"b":[1,2,3] }', {"a": 123, "b": [1,2,3]})
+    ('@Serialized:{"a":123,"b":[1,2,3] }', {"a": 123, "b": [1, 2, 3]})
 ]
 
 parser_exception_testcases = [
@@ -46,11 +62,11 @@ parser_exception_testcases = [
 class TestParseValue(unittest.TestCase):
     @parameterized.expand(parser_testcases)
     def test_correct_parsing(self, input_val, output):
-        self.assertEqual(output, fr.parse_value(input_val))
+        self.assertEqual(output, fr.parse_property(input_val))
 
     @parameterized.expand(parser_exception_testcases)
     def test_parsing_exceptions(self, input_val):
-        self.assertRaises(ValueError, fr.parse_value, input_val)
+        self.assertRaises(ValueError, fr.parse_property, input_val)
 
 
 class TestFramsRead(unittest.TestCase):
