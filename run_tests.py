@@ -54,8 +54,9 @@ parser_testcases = [
     ('@Serialized:{"a":123 }', {"a": 123}),
     ('@Serialized:{"a":123,"b":2 }', {"a": 123, "b": 2}),
     ('@Serialized:{"a":123,"b":[1,2,3] }', {"a": 123, "b": [1, 2, 3]}),
-    # TODO
-    # ('@Serialized:Population<0x85f53a8>', ???)
+    ('@Serialized:XYZ[0,1,2]', (0,1,2)),
+    ('@Serialized:Population<0x85f53a8>', 'Population<0x85f53a8>'),
+    ('@Serialized:CrazyObject[{},{},[[]]]', 'CrazyObject[{},{},[[]]]')
 ]
 
 parser_exception_testcases = [
