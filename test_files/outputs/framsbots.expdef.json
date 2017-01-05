@@ -1,0 +1,144 @@
+[
+  {
+    "code": "\n//Author: Bartosz Szopka @ Poznan University of Technology, 2007\n\n//TODO\n//consider using Creature(sGroup).nosim for creatures/groups of objects that do not need to be simulated (are dead) to speed things up\n//consider using short, simple sounds (not too long, as playing tones is synchronous)\n\n\n\n\n// coordinates of last clicked point\nglobal click_point;\n\n// //////////////////////////\n// Initialization\n\n// descriptions of a creatures that can be used in a game\nglobal creatures;\n\nfunction initCreatures()\n{\n  // define available creatures\n  // fields in an creature array are:\n  // 1: name,\n  // 2: genotype,\n  // 3: index of a bend muscle,\n  // 4: weight of distance to target when computing bend signal\n  // 5: weight of current bend state when computing new one\n  creatures = [];\n  creatures.add( [\"Worm\",\n                  \"fffX(fffIX[S1:1.017], RRlFFFMMMX[|-1:-10,3:9.501,in:0]llllFFMMMX[|1:-7.207]RlllFFFMMMX[|G:-5.088], fffIX[S1:1.145])\",\n                  3,\n                  1.0 / 50,\n                  9.0]\n               );\n  creatures.add([\"4 Legs\",\n                 \"lllfffX[0:2.420, 2:-2, 1:-1][-1:1, 0:1, 0:-1][-1:1](RRlllfffMMMX[|-1:-10]lllFFFMMMX[|-2:-1], fffIXlllfffMMMsX[|6:10, 3:-10](RRlllfffMMMIX[|-4:-10]lllFFFMMMIX[|-5:-1][S:1], , RRlllfffMMMIX[|-7:10]lllFFFMMMIX[|-8:-1][S:1]), RRlllfffMMMX[|-10:10]lllFFFMMMX[|-11:-1.784])\",\n                 8,\n                 1.0 / 50,\n                 0.0]\n               );\n}\n\nfunction getCreature(index)\n{\n  if (index == -1)\n    index = Math.random(creatures.size);\n  return creatures[index];\n}\n\n@include \"framsbots-levels.inc\"\n\nfunction onExpDefLoad()\n{\n  initCreatures();\n  initLevels();\n\n  // define genotype and creature groups\n  var pop=Populations[0];\n  pop.name = \"Enemies\";\n  pop.nnsim = 0;\n  pop.enableperf = 1;\n  pop.death = 0;\n  pop.energy = 1;\n  pop.selfmask = 0x10001; pop.othermask = 0x30000;\n\n  pop=Populations.addGroup(\"Player\");\n  pop.nnsim = 1;\n  pop.enableperf = 1;\n  pop.death = 0;\n  pop.energy = 1;\n  pop.selfmask = 0x20002; pop.othermask = 0x50000;\n\n  pop=Populations.addGroup(\"Food\");\n  pop.nnsim = 0;\n  pop.enableperf = 0;\n  pop.death = 1;\n  pop.energy = 1;\n  pop.selfmask = 0x40004; pop.othermask = 0x20004;\n}\n\nfunction onExpInit()\n{\n  ExpState.lifes = 3;\n  click_point = [0.0, 0.0];\n\n  initLevel();\n}\n\nfunction initLevel()\n{\n  Populations[0].clear();\n  Populations[1].clear();\n  Populations[2].clear();\n\n  Populations[0].nnsim = 0;\n\n  var levelNumber;\n  if (ExpProperties.level == -1)\n    levelNumber = Math.random(levels.size);\n  else\n    levelNumber = ExpProperties.level;\n\n  var level = levels[levelNumber];\n  printState(\"Level #\" + (levelNumber + 1) + \": \" + level[0]);\n\n  World.wrldbnd = level[2];\n  World.wrldsiz = level[1];\n  World.wrldwat = -1;\n  World.wrldtyp = level[3];\n  World.wrldmap = level[4];\n\n  World.wrldchg();\n\n  ExpProperties.enemiesCount = level[5];\n  ExpProperties.collisionFreeze = level[6];\n\n  ExpProperties.enemyCreature = level[7];\n  ExpProperties.playerCreature = level[8];\n\n  createPlayer();\n  createEnemies();\n}\n\nfunction createPlayer()\n{\n  print(\"Creating Player creature...\");\n  var c = Populations[1].add(getCreature(ExpProperties.playerCreature)[1]);\n  c.name = \"Player\";\n  c.data->creature_info = getCreature(ExpProperties.playerCreature);\n  c.data->history = [];\n  c.idleen = 0;\n  c.energy0 = ExpProperties.playerEnergy0;\n  c.energy = c.energy0;\n  c.nnenabled = 0;\n}\n\nfunction createEnemies()\n{\n  ExpState.livingEnemies = 0;\n  var pop=Populations[0];\n  while (pop.size < ExpProperties.enemiesCount)\n  {\n    ExpState.livingEnemies++;\n    print(\"Creating Enemy creature #\" + ExpState.livingEnemies);\n    var creature = getCreature(ExpProperties.enemyCreature);\n    var enemy = pop.add(creature[1]);\n    enemy.name = \"Enemy #\" + ExpState.livingEnemies;\n    enemy.data->creature_info = creature;\n    enemy.data->history = [];\n    enemy.idleen = 0;\n    enemy.energy0 = ExpProperties.enemyEnergy0;\n    enemy.energy = enemy.energy0;\n  }\n}\n\nfunction createFood()\n{\n  var food = Populations[2].add(\"//0\\nm:Vstyle=food\\np:\");\n\n  food.name = \"Apple\";\n  food.idleen = ExpProperties.foodIdleEnergy;\n  food.energy0 = ExpProperties.foodEnergy0;\n  food.energy = food.energy0;\n  food.nnenabled = 0;\n}\n\nfunction onBorn(cr)\n{\n  // place newly born creature\n\n  var retry = 50; //try 50 times\n  var placed_ok = 0;\n  while (retry-- && !placed_ok)\n  {\n    switch (cr.population.index)\n    {\n    case 0:\n      place_centerhead(cr);\n      break;\n    case 1:\n      place_centered(cr);\n      break;\n    case 2:\n      place_centerhead(cr);\n      break;\n    }\n\n    if (!cr.boundingBoxCollisions(0))\n      placed_ok = 1;\n  }\n  if (!placed_ok)\n    print(\"onBorn() could not avoid collisions.\");\n}\n\nfunction place_centered(cr)\n{\n  var x, y, z;\n  cr.rotate(0, 0, Math.pi4 * Math.random(8));\n\n  x = (World.wrldsiz - cr.bboxSize.x) / 2;\n  y = (World.wrldsiz - cr.bboxSize.y) / 2;\n  z = WorldMap.getHeight(x, y);\n\n  if (World.simtype == 1)\n    z += 0.2;\n  cr.locationSetBboxLow(x, y, z - 0.999);\n  return ;\n}\n\n\nfunction place_centerhead(cr)\n{\n  var x, y, z;\n  // place creatures only where world level = 0\n  // remember about it when creating maps for levels!!!\n  do\n  {\n    x = (World.wrldsiz - cr.bboxSize.x) * Math.rnd01 - cr.bboxSize.x / 2;\n    y = (World.wrldsiz - cr.bboxSize.y) * Math.rnd01 - cr.bboxSize.y / 2;\n\n    z = WorldMap.getHeight(x, y);\n  }\n  while (z != 0);\n\n  var hx = float(World.wrldsiz / 2) - x;\n  var hy = float(World.wrldsiz / 2) - y;\n  var alpha_rad = vectorsAngle([1.0, 0.0], [hx, hy]);\n\n  cr.rotate(0, 0, alpha_rad);\n  cr.locationSetBboxLow(x, y, z - 0.999);\n\n  return ;\n}\n\nfunction getPlayer()\n{\n  return Populations[1][0];\n}\n\n// //////////////////////////\n// Mouse Click event\n\nfunction queryEventNames()\n{\n  return [\"Go there!\"];\n}\n\nfunction onUserEvent(type, point, vector)\n{\n  var p = WorldMap.intersect(point, vector);\n  if (p)\n  {\n    click_point = [p[0], p[1]];\n    moveEnabled(1);\n    print(\"Clicked point: [\" + click_point[0] + \", \" + click_point[1] + \"]\");\n  }\n  else\n    print(\"no intersection...\");\n}\n\nfunction onMouseClick(options, xy, point, vector)\n{\n  if (options & 1024) options-=1024;//ignore doubleclick\n\n  if (options == 1)\n  {\n    onUserEvent(0, point, vector);\n    return 1;\n  }\n  return 0;\n}\n\n// enables/disables move\n// usage:\n//   moveEnabled(0) to pause the game\n//   moveEnabled(1) to resume\nfunction moveEnabled(enabled)\n{\n  getPlayer().nnenabled = enabled;\n  Populations[0].nnsim = enabled;\n}\n\n// ///////////////////////////////////////////////////\n// Computing angle between walk and target vectors\n\nfunction vectorsAngle(v1, v2)\n{\n  var x1 = v1[0];\n  var y1 = v1[1];\n  var l1 = Math.sqrt(x1 * x1 + y1 * y1);\n\n  var x2 = v2[0];\n  var y2 = v2[1];\n  var l2 = Math.sqrt(x2 * x2 + y2 * y2);\n\n  var vProduct = x1 * y2 - y1 * x2;\n  var direction;\n\n  if (vProduct >= 0)\n    direction = 1.0;\n  else\n    direction = -1.0;\n\n  var cosinus = (x1 * x2 + y1 * y2) / (l1 * l2);\n  var angle = Math.acos(cosinus);\n\n  print(\"Vector1: [\" + x1 + \", \" + y1 + \"] Vector2: \" + x1 + \", \" + y1 + \"] \" +\n        \"Angle: \" + (180.0 * angle / Math.pi) + \" Direction: \" + direction);\n\n  return direction * angle;\n}\n\nfunction saveCreaturePosition(creature)\n{\n  // only update history of creatures that are moving\n  if (creature.nnenabled && creature.population.nnsim)\n  {\n    if (creature.data->history == null)\n      creature.data->history = [];\n\n    // save creatures position in history vector\n    creature.data->history.add([creature.bboxCenter.x, creature.bboxCenter.y]);\n    // if history vector is too long remove oldest position\n    while (creature.data->history.size > ExpProperties.historyLength)\n      creature.data->history.remove(0);\n  }\n}\n\nfunction updateCreatureBend(creature, target_x, target_y)\n{\n  var neuronIndex = creature.data->creature_info[2];\n\n  if (creature.data->history.size == ExpProperties.historyLength)\n  {\n    var distanceWeight = creature.data->creature_info[3];\n    var currStateWeight = creature.data->creature_info[4];\n\n    var azimuth_x = target_x - creature.bboxCenter.x;\n    var azimuth_y = target_y - creature.bboxCenter.y;\n    var azimuth_dist = Math.sqrt(azimuth_x * azimuth_x + azimuth_y * azimuth_y);\n\n    var walk_x = creature.bboxCenter.x - creature.data->history[0][0];\n    var walk_y = creature.bboxCenter.y - creature.data->history[0][1];\n\n    var angle = vectorsAngle([walk_x, walk_y], [azimuth_x, azimuth_y]);\n    var signal = Math.sin(angle / 2);\n    var scale = (distanceWeight * azimuth_dist) + 1;\n\n    var signal = signal / scale;\n\n    creature.getNeuro(neuronIndex ).hold = 1;\n    creature.getNeuro(neuronIndex ).currState = (currStateWeight * creature.getNeuro(neuronIndex).state + signal) / (currStateWeight + 1.0);\n  }\n  else\n  {\n    creature.getNeuro(neuronIndex ).hold = 1;\n    creature.getNeuro(neuronIndex ).currState = 0;\n  }\n}\n\n\n// ////////////////////////////////\n// Simulation steps\n\nfunction onStep()\n{\n  var i = 0;\n  // for every Enemy\n  var enemies = Populations[0];\n  for (i = 0; i < enemies.size; i++)\n  {\n    var enemy = enemies[i];\n    saveCreaturePosition(enemy);\n    updateCreatureBend(enemy, getPlayer().bboxCenter.x, getPlayer().bboxCenter.y);\n  }\n\n  // if enemy is alone it slowly dies...\n  if ((ExpState.livingEnemies == 1) && (enemies.nnsim))\n  {\n    for (i = 0; i < enemies.size; i++)\n    {\n      if (enemies[i].nnenabled)\n      {\n        enemies[i].energy -= ExpProperties.enemyAloneDamage / 1000.0;\n        checkEnemyState(enemies[i]);\n      }\n    }\n  }\n\n  // check the distance between player and click point\n  var dx = getPlayer().bboxCenter.x - click_point[0];\n  var dy = getPlayer().bboxCenter.y - click_point[1];\n  var dist = Math.sqrt(dx * dx + dy * dy);\n\n  if (dist <= 1.0)\n  {\n    // freeze player creature near click point\n    getPlayer().nnenabled = 0;\n  }\n  else\n  {\n    saveCreaturePosition(getPlayer());\n    updateCreatureBend(getPlayer(), click_point[0], click_point[1]);\n  }\n\n  checkGameState();\n}\n\nfunction checkGameState()\n{\n  if (getPlayer().energy < 0)\n  {\n    // life lost\n    if (ExpState.lifes > 0)\n    {\n    ExpState.lifes--;\n\n    if (ExpState.lifes <= 0)\n    {\n      // game over\n      printState(\"Game Over!\");\n      Simulator.stop();\n      return ;\n    }\n    else\n    {\n      // relaunch level\n      initLevel();\n      return ;\n    }\n    }\n  }\n\n  if (ExpState.livingEnemies == 0)\n  {\n    if (ExpProperties.level == levels.size - 1)\n    {\n      // game finished\n      printState(\"You win!\");\n      Simulator.stop();\n      return ;\n    }\n    else\n    {\n      // next level\n      nextLevel();\n      initLevel();\n      return ;\n    }\n  }\n}\n\nfunction printState(msg)\n{\n  ExpState.banner = msg;\n  Simulator.print(ExpState.banner);\n}\n\nfunction print(msg)\n{\n  if (ExpProperties.debug)\n    Simulator.print(msg);\n}\n\n// ////////////////////////////\n// Collisions\n\nfunction onPlayerCrCollision()\n{\n  // frozen Enemies also hurt, but slower\n  var scale = float(CrCollision.Creature2.nnenabled) * ExpProperties.enemyPlayerDamage\n              + float(!CrCollision.Creature2.nnenabled) * ExpProperties.enemyFrozenPlayerDamage;\n\n  var e = scale * 0.5; /*Collision.Part2.ing not allowed in this handler*/\n\n  print(\"Player damage: \" + e + \" by \" + CrCollision.Creature2.name);\n  CrCollision.Creature1.transferEnergyTo(CrCollision.Creature2,e);\n}\n\nfunction onFoodCollision()\n{\n  // eat an apple\n  var e = Collision.Part2.ing * 100;\n  print(\"A bit of an apple: \" + e);\n  Collision.Creature1.transferEnergyTo(Collision.Creature2,e);\n}\n\nfunction onDied(cr)\n{\n  if (cr.population.index != 2)\n    return ;\n  // just for apples\n\n  if (getPlayer().energy > getPlayer().energy0)\n  {\n    // if apple eaten and enough energy then gain life\n    ExpState.lifes++;\n    getPlayer().energy -= getPlayer().energy0;\n    print(\"Additional life gained! Current lifes: \" + ExpState.lifes);\n  }\n}\n\nfunction onEnemiesCrCollision()\n{\n  var c1 = CrCollision.Creature1;\n  var c2 = CrCollision.Creature2;\n\n  // check if both creatures are Enemies and at least one of them is not frozen\n  if ((c1.population == c2.population) && (c1.nnenabled || c2.nnenabled))\n  {\n    var e =  /*Collision.Part2.ing * Collision.Part1.ing */ 0.125 * ExpProperties.enemyEnemyDamage;\n    print(\"Collision between \" + c1.name + \" and \" + c2.name + \"; Energy taken: \" + e );\n    c1.energy -= e;\n    c2.energy -= e;\n    checkEnemyState(c1);\n    checkEnemyState(c2);\n  }\n\n  // trying to avoid collisions of frozen creatures\n  // because it slows down the simulation\n  //\n  // this solution looks quite strange during the game\n  // that's why I commented it\n  //\n  //if((c1.group == c2.group) && (!c1.nnenabled) && (!c2.nnenabled)){\n  //  var x = c1.bboxCenter.x - c2.bboxCenter.x;\n  //  var y = c1.bboxCenter.y - c2.bboxCenter.y;\n  //  var d = Math.sqrt(x*x + y*y);\n  //  x = 0.0 + x / d;\n  //  y = 0.0 + y / d;\n  //\n  //  c1.locationMoveBy(x * c1.bboxSize.x, y * c1.bboxSize.y, 0);\n  //  c2.locationMoveBy(-x * c2.bboxSize.x, -y * c2.bboxSize.y, 0);\n  //}\n}\n\nfunction checkEnemyState(enemy)\n{\n  if (ExpProperties.collisionFreeze)\n  {\n    // freeze creature with energy < 0\n    if ((enemy.nnenabled) && (enemy.energy <= 0))\n    {\n      enemy.nnenabled = 0;\n      enemyKilled();\n    }\n  }\n  else\n  {\n    // or kill creatures with energy < 0\n    if (enemy.energy <= 0)\n    {\n      enemy.population.kill(enemy.index);\n      enemyKilled();\n    }\n  }\n}\n\nfunction enemyKilled()\n{\n  // count living enemies\n  ExpState.livingEnemies = 0;\n  var i;\n  var pop=Populations[0];\n  for (i = 0; i < pop.size; i++)\n  {\n    if (pop[i].nnenabled)\n      ExpState.livingEnemies++;\n  }\n  if (Math.rndUni(0.0, 1.0) <= ExpProperties.foodProbability)\n    createFood();\n}\n\n// ////////////////////////////\n// ExpProperties setters\n\nfunction ExpProperties_enemiesCount_set()\n{\n  var pop=Populations[0];\n\n  while (pop.size > ExpProperties.enemiesCount)\n    pop.delete(Math.random(pop.size));\n\n  enemyKilled();\n}\n\nfunction ExpProperties_level_set()\n{\n  initLevel();\n}\n",
+    "info": "Framsbots is a simple game inspired by the classic Robots game.\nThe aim of this game is to run away from hostile creatures and make all of them hit each other.\nJust click somewhere (left-click or double-right-click) to move your creature (the one that is in the middle of the world in the beggining). Your creature will go towards the point you clicked.\nAll the enemies will move towards you. Use this information to make them hit each other, so they will loose energy and die.\nIf you see an apple, try to get it. You will gain energy and you may even get a new life!\nUse shift+left mouse drag to rotate world.\n\nRead more about this game:\nhttp://www.framsticks.com/wiki/FramsBots\n\n",
+    "_classname": "expdef",
+    "name": "Framsbots - Game"
+  },
+  {
+    "type": "d -1 1 -1 ~Random~Worm~4 Legs",
+    "id": "enemyCreature",
+    "_classname": "property",
+    "name": "Enemy creature type"
+  },
+  {
+    "group": "Enemies",
+    "type": "d 0 50 10",
+    "id": "enemiesCount",
+    "_classname": "property",
+    "name": "Number of enemy creatures"
+  },
+  {
+    "type": "f 0 1000 300",
+    "name": "Starting energy of enemy creature",
+    "group": "Enemies",
+    "id": "enemyEnergy0",
+    "_classname": "property",
+    "help": "Base starting energy level"
+  },
+  {
+    "group": "Enemies",
+    "type": "f 0 10 2",
+    "id": "enemyPlayerDamage",
+    "_classname": "property",
+    "name": "Multiplier of energy taken by Enemy"
+  },
+  {
+    "group": "Enemies",
+    "type": "f 0 10 1",
+    "id": "enemyFrozenPlayerDamage",
+    "_classname": "property",
+    "name": "Multiplier of energy taken by frozen Enemy"
+  },
+  {
+    "group": "Enemies",
+    "type": "f 0 100 5",
+    "id": "enemyEnemyDamage",
+    "_classname": "property",
+    "name": "Multiplier of energy taken when Enemies collide"
+  },
+  {
+    "group": "Enemies",
+    "type": "f 0 100 40",
+    "id": "enemyAloneDamage",
+    "_classname": "property",
+    "name": "Multiplier of energy taken from alone Enemy"
+  },
+  {
+    "group": "Enemies",
+    "type": "d 0 1 1 ~Kill~Freeze",
+    "id": "collisionFreeze",
+    "_classname": "property",
+    "name": "What to do when Enemies die"
+  },
+  {
+    "type": "d -1 1 1 ~Random~Worm~4 Legs",
+    "id": "playerCreature",
+    "_classname": "property",
+    "name": "Player creature type"
+  },
+  {
+    "type": "f 0 1000 500",
+    "name": "Starting energy of player creature",
+    "group": "Player",
+    "id": "playerEnergy0",
+    "_classname": "property",
+    "help": "Base starting energy level"
+  },
+  {
+    "type": "f 0 1000 500",
+    "name": "Starting energy of food",
+    "group": "Food",
+    "id": "foodEnergy0",
+    "_classname": "property",
+    "help": "Base starting energy level"
+  },
+  {
+    "type": "f 0 10 0.03",
+    "name": "Amount of energy lost",
+    "group": "Food",
+    "id": "foodIdleEnergy",
+    "_classname": "property",
+    "help": "How much energy food looses each step"
+  },
+  {
+    "type": "f 0 1 0.1",
+    "name": "Food probablity",
+    "group": "Food",
+    "id": "foodProbability",
+    "_classname": "property",
+    "help": "Probability of food appearing after enemy killed"
+  },
+  {
+    "group": "Azimuth",
+    "type": "d 2 1000 200",
+    "id": "historyLength",
+    "_classname": "property",
+    "name": "Maximum length of positions history vectors"
+  },
+  {
+    "type": "d -1 7 0",
+    "id": "level",
+    "_classname": "property",
+    "help": "Number of a level to play (-1 is random)",
+    "name": "Level"
+  },
+  {
+    "type": "d 0 1 0",
+    "id": "debug",
+    "_classname": "property",
+    "name": "Show additional debug messages"
+  },
+  {
+    "type": "s",
+    "help": "banner to be used by Theater",
+    "name": "Banner",
+    "id": "banner",
+    "_classname": "state",
+    "flags": 16
+  },
+  {
+    "type": "d",
+    "id": "lifes",
+    "_classname": "state",
+    "flags": 16,
+    "name": "Lifes"
+  },
+  {
+    "type": "d",
+    "id": "livingEnemies",
+    "_classname": "state",
+    "flags": 16,
+    "name": "Number of living enemies"
+  }
+]

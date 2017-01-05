@@ -1,0 +1,150 @@
+expdef:
+name:Neuroanalysis
+info:~
+This experiment evaluates all genotypes in the gene pool. During simulation, the output signal of each neuron is analyzed, and its average and standard deviation are computed. These data are then saved in the 'Info' field of the genotype.
+~
+code:~
+function onExpDefLoad()
+{
+  GenePools[0].name = "Genotypes";
+
+  var p=Populations[0];
+  p.name = "Creatures";
+  p.nnsim = 1;
+  p.enableperf = 1;
+  p.death = 1;
+  p.energy = 1; 
+  p.selfmask = p.othermask = 1;
+
+  ExpState.current = 0;
+  ExpProperties.creath = 0.1;
+  ExpProperties.evaltime = 1000;
+}
+
+function onExpInit()
+{
+  for (var g in GenePools[0])
+    g.data->neuroanalysis = null;
+  ExpState.current = 0;
+}
+
+@include "standard_loadsave.inc"
+@include "standard_placement.inc"
+
+function onBorn(cr)
+{
+  var i, vec;
+  vec = Vector.new();
+  for (i = 0;i < cr.numneurons;i++)
+  {
+    vec.add(0); // num.samples
+    vec.add(0.0); // sum(x)
+    vec.add(0.0); // sum(x^2)
+  }
+  cr.data->neuroanalysis = vec;
+  cr.energy0 = 100;
+  cr.energy = cr.energy0;
+  cr.idleen = cr.energy0 / ExpProperties.evaltime;
+  placeCreatureRandomly(cr,0,4);
+}
+
+function onStep()
+{
+  var j, k, vec, s;
+  for (var cr in Populations[0])
+  {
+    vec = cr.data->neuroanalysis;
+    k = 0;
+    for (j = 0;j < cr.numneurons;j++)
+    {
+      var n=cr.getNeuro(j);
+      if (n)
+        s = n.state;
+      else
+        s = null;
+      vec[k] = vec[k] + 1;
+      k++;
+      vec[k] = vec[k] + s;
+      k++;
+      vec[k] = vec[k] + s*s;
+      k++;
+    }
+  }
+  if (Populations[0].size < 1)
+  {
+    if (ExpState.current >= GenePools[0].size)
+    {
+      Simulator.print("All genotypes analyzed.");
+      Simulator.stop();
+    }
+    else
+    {
+      var g=GenePools[0][ExpState.current];
+      if (g.numneurons < 1)
+        ExpState.current++;
+      else
+        Populations[0].add(g);
+    }
+  }
+}
+
+function onDied(cr)
+{
+  var j, k = 0, vec, n, s2, s, sq;
+  var result = "";
+  vec = cr.data->neuroanalysis;
+  for (j = 0;j < cr.numneurons;j++)
+  {
+    n = vec[k];
+    s = vec[k + 1];
+    s2 = vec[k + 2];
+    result += j;
+    result += "\t";
+    result += s / n;
+    result += "\t";
+    
+    sq = s2 * n - s * s;
+    if (sq<0) sq=0.0; //protection against floating point inaccuracy, e.g. 1000.0*1000.0-1000.0*1000.0 gives a small negative number
+    result += Math.sqrt(sq / (n * (n - 1)));
+
+    result += "\n";
+    k += 3;
+  }
+  var g=GenePools[0][ExpState.current];
+  g.info = "Neuroanalysis results (" + n + " samples):\nneuron\taverage\tstd.dev.\n" + result;
+  ExpState.current++;
+}
+
+function ExpProperties_restart_call()
+{
+  onExpInit();
+}
+
+~
+
+property:
+id:evaltime
+name:Evaluation time
+type:d 100 100000
+
+property:
+id:restart
+name:Restart from the first genotype
+type:p
+
+state:
+id:current
+name:Evaluating genotype
+type:d
+flags:16
+
+property:
+id:creath
+name:Initial elevation
+type:f -1 50
+help:~
+Vertical position (above the surface) where newborn creatures are placed.
+Negative values are only used in the water area:
+  0   = at the surface
+-0.5 = half depth
+-1   = just above the bottom~

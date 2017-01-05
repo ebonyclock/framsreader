@@ -1,4 +1,5 @@
 import re as _re
+from collections import defaultdict
 
 INT_FLOAT_REGEX = r'([+|-]?(?:0|[1-9]\d*))(\.\d+)?([eE][-+]?\d+)?'
 NATURAL_REGEX = r'(?:0|[1-9]\d*)'
@@ -42,14 +43,18 @@ def _str_to_number(s):
     raise ValueError()
 
 
-def parse_property(str_property):
-    assert isinstance(str_property, str)
-    if str_property.startswith("@Serialized:"):
-        prop = str_property.split(":", 1)[1]
+def default_parse(value, *args, **kwargs):
+    assert isinstance(value, str)
+    if value.startswith("@Serialized:"):
+        prop = value.split(":", 1)[1]
         prop = deserialize(prop)
         return prop
     else:
-        return _parse_simple_value(str_property)
+        return _parse_simple_value(value)
+
+
+def parse_property(value, key):
+    raise NotImplementedError()
 
 
 def extract_string(exp):
@@ -75,6 +80,10 @@ def extract_number(exp):
     return number, reminder
 
 
+def extract_xyz(exp):
+    raise NotImplementedError()
+
+
 def extract_reference(exp):
     exp = exp[1:].strip()
     i_match = _re.match(NATURAL_REGEX, exp)
@@ -86,6 +95,10 @@ def extract_reference(exp):
         ref_index = int(exp[:end_i])
         reminder = exp[end_i:]
     return ref_index, reminder
+
+
+def extract_custom_object(exp):
+    raise NotImplementedError()
 
 
 def deserialize(expression):
@@ -121,6 +134,7 @@ def deserialize(expression):
                 # TODO msg
                 raise ValueError()
         # List continuation
+        # TODO support for XYZ tuples
         if exp[0] == ",":
             if not (isinstance(objects[-1], list) or (isinstance(objects[-1], dict) and not expect_dict_value)):
                 # TODO msg
@@ -150,6 +164,8 @@ def deserialize(expression):
         elif exp.startswith("null"):
             current_object = None
             exp = exp[4:]
+        elif exp.startswith("XYZ"):
+            current_object, exp = extract_xyz(exp)
         elif exp[0] == "[":
             current_object = list()
             opened_lists += 1
@@ -170,13 +186,8 @@ def deserialize(expression):
                 raise ValueError()
             current_object = references[i]
             current_object_is_reference = True
-
-        elif exp[0] == '<':
-            # TODO nonserializable objects
-            raise NotImplementedError()
         else:
-            # TODO custom objects
-            raise NotImplementedError()
+            current_object, reminder = extract_custom_object(exp)
 
         if len(objects) > 0:
             if isinstance(objects[-1], list):
@@ -193,7 +204,7 @@ def deserialize(expression):
                     last_dict_key = current_object
                     expect_dict_value = True
         # TODO support for other types of objects?
-        if isinstance(current_object, (list, dict)) and not current_object_is_reference:
+        if isinstance(current_object, (list, dict, tuple)) and not current_object_is_reference:
             objects.append(current_object)
             references.append(current_object)
         if not main_object_determined:
@@ -218,6 +229,8 @@ def loads(s, *args, **kwargs):
     current_object = None
     objects = []
     parsing_error = False
+    parse_functions = defaultdict(lambda: default_parse)
+    parse_fun = None
     for line_num, line in enumerate(lines):
         try:
             if multiline_key is not None:
@@ -258,17 +271,22 @@ def loads(s, *args, **kwargs):
                         # if suffix !="":
                         #     raise ValueError()
                         current_object = {"_classname": class_name}
+                        parse_fun = parse_functions[class_name]
                         objects.append(current_object)
                         continue
 
                 if current_object is not None:
                     key, value = line.split(":", 1)
+                    # TODO check if the key is supported for given class
+                    if key.strip() == "":
+                        # TODO msg
+                        raise ValueError()
                     if value.strip() == "~":
                         multiline_value = ""
                         multiline_key = key
                     else:
-                        # TODO should properties be unique?
-                        current_object[key] = parse_property(value)
+                        value = parse_fun(value, key)
+                        current_object[key] = value
 
         except ValueError:
             raise ValueError()

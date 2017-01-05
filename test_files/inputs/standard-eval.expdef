@@ -1,0 +1,374 @@
+expdef:
+name:Multiple evaluation of loaded genotypes
+info:~
+Use this experiment to evaluate all genotypes one by one.
+Use the "Repeat count" parameter to set the required number of evaluations of each genotype.
+
+The genotypes for evaluation _must_ be different. TODO why? hopefully this assumption is no longer required?
+
+First load your genotypes for evaluation, then define the evaluation plan, initialize the experiment, and finally run the simulation to perform all evaluations.
+
+After evaluation, the selected key in the Genotype.data Dictionary ("evaluation" by default) contains a Dictionary of results. These results can also be saved to a file, as defined by the "evalsavefile" parameter.
+~
+code:~
+
+global g_evaluations; //Vector to hold subsequent genotype fitness values
+global g_time0; //used for estimating simulation time needed for evaluation
+global g_plan, g_current;
+
+function onExpDefLoad()
+{
+	// define genotype and creature groups
+	GenePools[0].name = "Genotypes";
+	update_fitformula();
+
+	var p = Populations[0];
+	p.name = "Creatures";
+	p.nnsim = 2;
+	p.enableperf = 2;
+	p.selfmask = 0x10001;
+	p.othermask = 0x20001;
+
+	p = Populations.addGroup("Food");
+	p.nnsim = 0;
+	p.enableperf = 0;
+	p.selfmask = 0x20002;
+	p.othermask = 0x10002;
+
+	//setting non-default values:
+	ExpProperties.evalcount = 10;
+	ExpProperties.p_nop = 1;
+	ExpProperties.p_mut = 0;
+	ExpProperties.p_xov = 0;
+}
+
+function onExpInit_Single()
+{
+	Populations[0].clear();
+	Populations[1].clear();
+//  GenePools.clearGroup(0);
+//  GenePools.newGenotype(ExpProperties.initialgen);
+//  GenePools.copySelected(0);
+	ExpState.totaltestedcr = 0;
+	ExpProperties_cleardata_call();
+	g_evaluations = [];
+	g_time0 = null;
+}
+
+function useNextFromPlan()
+{
+	if (g_plan && (g_plan.size > 0))
+	{
+		g_current = g_plan[0];
+		Simulator.print("Using plan: " + g_current);
+		g_plan.remove(0);
+		if (g_current[0] != "")
+			Simulator.import(g_current[0]);
+		return 1;
+	}
+	return 0;
+}
+
+function onExpInit()
+{
+	var lines = String.split2(String.replace(ExpProperties.evalplan, "\r", ""), "\n");
+	g_plan = [];
+	for (var line in lines)
+	{
+		line = String.replace(line, " ", "");
+		var file_par = String.split(line, ":");
+		if (file_par.size == 2)
+		{
+			var par = String.split(file_par[1], ",");
+			g_plan.add([file_par[0], par]);
+		}
+	}
+
+	if (g_plan.size == 0)
+	{
+		g_plan = null;
+		Simulator.message("Evaluation plan is invalid", 2);
+		ExpState.totaltestedcr = GenePools[0].size;
+	}
+	else
+	{
+		useNextFromPlan();
+		if (g_current)
+			for(var g in GenePools[0])
+				g.data[ExpProperties.evalsavedata] = {};
+		onExpInit_Single();
+	}
+}
+
+@include "standard_placement.inc"
+
+function onBorn(cr)
+{
+	if (g_time0 == null) g_time0 = Math.time;
+	var retry = 50; //try 50 times
+	var placed_ok = 0;
+	while (retry--)
+	{
+		var trycentral = (ExpProperties.placement == 1) && (retry == 19); //place central only in the first trial
+		placeCreatureRandomly(cr, trycentral, ExpProperties.rotation);
+		if (!cr.boundingBoxCollisions(0))
+		{
+			placed_ok = 1;
+			break;
+		}
+	}
+	if (!placed_ok)
+		Simulator.message("onBorn() could not avoid collisions.", 1);
+
+	if (cr.population.index == 0)
+	{
+		// creature
+		var n = cr.numjoints;
+		if (n == 0) n = cr.numparts; //creatures with only one Part will live just as long as one-stick creatures
+		cr.idleen = ExpProperties.e_meta * n;
+		cr.energy0 = cr.energy0 * ExpProperties.Energy0 * n;
+		cr.energy = cr.energy0;
+	}
+	else
+	{
+		// food
+		cr.name = "Food";
+		cr.idleen = 0;
+		cr.energy0 = ExpProperties.feede0;
+		cr.energy = cr.energy0;
+	}
+}
+
+function addfood()
+{
+	if (ExpProperties.foodgen == "")
+		return Populations[1].add("//0\nm:Vstyle=food\np:");
+	else
+		return Populations[1].add(ExpProperties.foodgen);
+}
+
+function onStep()
+{
+	if (ExpState.totaltestedcr >= GenePools[0].size) //end condition tested onStep because it can sometimes restart the experiment which is fatal in onCreatureDied
+	{
+		if (g_plan == null) //invalid intitial conditions (no plan)
+			Simulator.stop();
+		else if (useNextFromPlan())
+		{
+			onExpInit_Single();
+		}
+		else
+		{
+			Simulator.print("Evaluation complete.");
+			Simulator.stop();
+			if (ExpProperties.evalsavefile != "")
+				printStats(ExpProperties.evalsavefile);
+		}
+	}
+
+	else
+
+		if (Populations[0].size < ExpProperties.MaxCreated)
+		{
+			if (GenePools[0].size == 0)
+			{
+				Simulator.stop();
+				Simulator.message("This experiment is designed to build creatures from genotypes, but the GenePool is empty.", 2);
+			}
+			else
+			{
+				var g = selectedForCreation();
+				//Simulator.print("g="+g);
+				if (g)
+				{
+					if (g.is_valid)
+						Populations[0].add(g);
+					else
+						Simulator.message("invalid genotype - ignored: " + g.info, 1);
+				}
+				else
+					Simulator.message("no genotype selected", 1);
+			}
+		}
+
+	if (ExpProperties.aging > 0)
+	{
+		for(var cr in Populations[0])
+			cr.idleen = ExpProperties.e_meta * cr.numjoints
+			            * Math.exp((0.6931471806 * cr.lifespan) / ExpProperties.aging);
+	}
+
+	if (Populations[1].size < ExpProperties.feed)
+		addfood();
+}
+
+function updatePerformanceWithPopSize(cr)
+{
+	var GROUP_IDENTICAL_GENOTYPES = 1; //do you want identical genotypes to be grouped as one Genotype object (with instances>1 and averaged performances)?
+	var g = null;
+	if (GROUP_IDENTICAL_GENOTYPES)
+		g = GenePools[0].findGenotype(cr.geno); //will be either null (if no cr.geno exists in GenePools[0]) or some existing Genotype
+
+	if (g == null) //cr.geno not found, which means that we have to add a new Genotype
+	{
+		g = Genotype.newFromCreature(cr);
+		g.num = 0; // 0 = it will be filled automatically
+		g.moveTo(GenePools[0]);
+		g.instances = 0;
+	}
+
+	//standard-eval specific performance handling moved here from onDied function:
+	var save_names = ["instances", "lifespan", "velocity", "distance", "vertvel", "vertpos"], save_values = {};
+	for(var n in save_names) save_values[n] = g.[n]; //shame we can't just clone the Genotype object :-P
+	g.instances = 0; //trick to have the fitness value for the single genotype instance...
+	g.addPerformanceFromCreature(cr); //averages performances of "g" according to instances and increments instances (here: no average, instances=0)
+	g_evaluations.add(g.fit); //...which is added to the vector
+	for(var n in save_names) g.[n] = save_values[n]; //undo and add performance again, to calculate all other values correctly (g.fit is already saved for later)
+	g.addPerformanceFromCreature(cr); //averages performances of "g" according to instances and increments instances
+
+	if (g.instances >= ExpProperties.evalcount)
+	{
+		g.instances = 0;
+		var time = (Math.time - g_time0) / ExpProperties.evalcount;
+		if (g_current)
+		{
+			var p = {};
+			for(var pname in g_current[1])
+			{
+				var value;
+				switch(pname)
+				{
+				case "fit":
+					value = g_evaluations.avg;
+					break;
+				case "fit_stdev":
+					value = g_evaluations.stdev;
+					break;
+				case "time":
+					value = time;
+					break;
+				default:
+					value = g.[pname];
+				}
+				p[pname] = value;
+				g.data[ExpProperties.evalsavedata][g_current[0]] = p;
+			}
+		}
+		if (Math.time - g_time0 > 2) Simulator.print("%d% complete..." % (100 * ExpState.totaltestedcr / GenePools[0].size));
+		g_time0 = null;
+		g_evaluations.clear();
+		ExpState.totaltestedcr++;
+	}
+	//LimitGenePool();
+	//Simulator.autosave();
+}
+
+function printStats(filename)
+{
+	var info;
+	var f = File.create(filename, "Evaluated genotypes");
+	f.writeString("[\n");
+	var first = 1;
+	for (var g in GenePools[0])
+	{
+		if (first) first = 0; else f.writeString(",\n");
+		info = g.data[ExpProperties.evalsavedata];
+		f.writeString("{\"num\":" + g.num + ",\"name\":\"" + g.name + "\",\"evaluations\":" + String.toJSON(info) + "}");
+	}
+	f.writeString("\n]\n");
+	f.close();
+}
+
+function onDied(cr)
+{
+	if (cr.population.index != 0)
+		return ; // ignore food
+	updatePerformanceWithPopSize(cr);
+}
+
+function selectedForDeletion()
+{
+	if (ExpProperties.delrule == 0)
+		return GenePools.random();
+	if (ExpProperties.delrule == 1)
+		return GenePools.revroulette();
+	return GenePools.worst();
+}
+
+function selectedForCreation()
+{
+	return GenePools[0][ExpState.totaltestedcr];
+}
+
+function onFoodCollision()
+{
+	var e = Collision.Part2.ing * ExpProperties.feedtrans;
+	//Simulator.print("transferring "+e+" from "+Collision.Creature1.name+" to "+Collision.Creature2.name);
+	Collision.Creature1.transferEnergyTo(Collision.Creature2,e);
+}
+
+function ExpProperties_cleardata_call()
+{
+	for(var g in GenePools[0])
+		g.instances = 0;
+	Simulator.print("Performance data reset.");
+}
+
+function limitPopulation(pop, n)
+{
+	n = pop.size - n;
+	while (n > 0)
+	{
+		pop.delete(pop.size - 1);
+		n--;
+	}
+}
+
+function ExpProperties_MaxCreated_set()
+{
+	limitPopulation(Populations[0], ExpProperties.MaxCreated); //creatures
+}
+
+function ExpProperties_feed_set()
+{
+	limitPopulation(Populations[1], ExpProperties.feed); //food
+}
+
+
+@include "standard_fitformula.inc"
+@include "standard_events.inc"
+@include "standard_loadsave.inc"
+
+~
+
+#include "standard_props.inc"
+#include "standard_props_eval.inc"
+
+property:
+id:cleardata
+name:Clear performance info
+type:p
+help:~
+Sets the number of instances of each genotype to zero (as if it has never been evaluated).
+Genotype performance values stay intact, yet they are meaningless if a genotype has no instances.~
+
+state:
+id:notes
+name:Notes
+type:s 1
+help:~
+You can write anything here
+(it will be saved to the experiment file)~
+
+state:
+id:totaltestedcr
+name:Evaluated creatures
+help:Total number of creatures evaluated in the experiment
+type:d
+flags:16
+
+state:
+id:creaturesgrouploaded
+name:creaturesgrouploaded
+type:d
+flags:34

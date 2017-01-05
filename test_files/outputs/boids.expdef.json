@@ -1,0 +1,62 @@
+[
+  {
+    "code": "\nglobal ceiling; //max allowed altitude for boids, above which they tend to turn downwards\n\n/*\nCollision detection is based on very scarce information (only three sensor directions, all in one plane), thus occasionally some creatures cannot avoid walls and fly into obstacles (also due to high speed = large \"step\"). This might be improved by further tuning parameters of collision avoidance, or by adding more sensors (up and down, so that they are no longer planar). While not perfect, simplicity of currently implemented collision detection makes it beautiful, so we stick to this version.\n*/\n\nglobal global_step_dt;\n\nfunction onExpDefLoad()\n{\n\tglobal_step_dt = 0.1;\n\n\tWorld.wrldg = 0;\n\tvar pop = Populations[0];\n\tpop.name = \"Creatures\";\n\tpop.death = 0;\n\tpop.selfmask = pop.othermask = 0;\n\tpop.bodysim = 0;\n\tpop.energy = 0;\n\tWireframeAppearance.set(\"1p_\", \"//0\\np:0,0,0\\np:1,0,0\\np:0.75,0.25,0\\np:0.75,-0.25,0\\nj:0,1\\nj:1,2\\nj:1,3\\n\", -3);\n\tSignalView.mode = 0; //signals are not displayed\n\n\tceiling = 17;\n\tExpProperties_worldmap_set(); //force call handler\n\n\t// the following example demonstrates live signal properties using the label formula:\n\t//\n\t//SignalView.mode = 1;//Custom\n\t//SignalView.addMap(\"flock\",0xffffff);\n\t//SignalView.labels = \"return \\\"z=\\\"+Signal.value.z;\";\n}\n\nfunction onBorn(cr)\n{\n\tcr.rotate(Math.rndUni(0, Math.twopi), Math.rndUni(0, Math.twopi), Math.rndUni(0, Math.twopi));\n\tcr.locationSetBboxLow(World.wrldsiz * Math.rnd01, World.wrldsiz * Math.rnd01, World.wrldsiz * Math.rnd01);\n\tvar sig = cr.signals.add(\"flock\");\n\tsig.value = cr.getMechPart(0);\n\tcr.driveLocal = (global_step_dt * 5, 0, 0);\n}\n\nfunction levelCreature(mechpart, amount) //levels the creature a bit so that it flies more \"horizontally\"\n{\n\tvar o = mechpart.orient.clone();\n\to.y.z = 0;\n\to.z.x = 0;\n\to.z.y = 0;\n\to.z.z = 1;\n\tmechpart.orient.between2(mechpart.orient, o, 1.0 - amount * global_step_dt);\n}\n\nfunction onCreaturesStep(cr)\n{\n\tvar p = cr.getMechPart(0);\n\tvar n = cr.signals.receiveSet(\"flock\", ExpProperties.range);\n\tif (n.size > 0)\n\t{\n\t\tvar i;\n\t\tvar orient = Orient.new();\n\t\tvar mp;\n\t\tvar distvec = XYZ.new(0, 0, 0);\n\t\tvar dist;\n\t\tvar mindist = ExpProperties.separ;\n\t\tvar mindistvec = null;\n\t\tvar center = XYZ.new(0, 0, 0);\n\t\tfor (i = 0; i < n.size; i++)\n\t\t{\n\t\t\tmp = n[i].value;\n\t\t\torient.x.add(mp.orient.x);\n\t\t\torient.y.add(mp.orient.y);\n\t\t\torient.z.add(mp.orient.z);\n\t\t\tdistvec.set(mp.pos);\n\t\t\tdistvec.sub(p.pos);\n\t\t\tcenter.add(distvec);\n\t\t\tdist = distvec.length;\n\t\t\tif (dist < mindist)\n\t\t\t{\n\t\t\t\tmindist = dist;\n\t\t\t\tmindistvec = distvec.clone();\n\t\t\t}\n\t\t}\n\t\tif (ExpProperties.rule2)\n\t\t{\n\t\t\torient.normalize();\n\t\t\tp.orient.between2(p.orient, orient, 1.0 - 0.5 * global_step_dt);\n\t\t}\n\t\tif (ExpProperties.rule1 && (mindistvec != null))\n\t\t{\n\t\t\tmindistvec.scale( -1);\n\t\t\tmindistvec.normalize();\n\t\t\tp.orient.betweenOV(p.orient, mindistvec, 1.0 - 1.0 * global_step_dt);\n\t\t}\n\t\telse\n\t\t{\n\t\t\tif (ExpProperties.rule3)\n\t\t\t{\n\t\t\t\tcenter.normalize();\n\t\t\t\tp.orient.betweenOV(p.orient, center, 1.0 - 0.5 * global_step_dt);\n\t\t\t}\n\t\t}\n\t}\n\n\tvar level_amount = 0.5; //tend to fly horizontally\n\n\tif (Math.rnd01 < 0.1 * global_step_dt)\n\t\tcr.rotate(Math.rnd01 - 0.5, Math.rnd01 - 0.5, Math.rnd01 - 0.5);\n\n\t// obstacle avoidance\n\tif (ExpProperties.rule4)\n\t{\n\t\t//the following makes 2D obstacle avoidance more effective in 3D world (intersect near ground will not fool that much detection of real obstacles)\n\t\tif ((p.z < 5.0) && (p.orient.x.z < 0)) //flying downwards and low?\n\t\t\tlevel_amount += 1.0; //level more!\n\n\t\t// calculate vector straight ahead - used for detecting obstacles\n\t\tvar front = cr.localToWorld(1, 0, 0);\n\t\tfront.sub(p.pos);\n\n\t\tvar vFront = [front.x, front.y, front.z];\n\t\tvar vCent = [p.pos.x, p.pos.y, p.pos.z];\n\n\t\t// calculate the point of collision\n\t\tvar intersect = WorldMap.intersect(vCent, vFront, ExpProperties.obstacledist);\n\n\t\t// if there is indeed an obstacle in the given distance\n\t\tif (intersect)\n\t\t{\n\t\t\t// If the distance to the obstacle is higher than 0, then correct the course\n\t\t\tif (intersect[3] > 0.0)\n\t\t\t{\n\t\t\t\t//the following makes 2D obstacle avoidance more effective in 3D world (left/right turns will be more effective when it flies horizontally)\n\t\t\t\tif (intersect[3] < 5.0) //close to obstacle?\n\t\t\t\t\tlevel_amount += 1.0; //level more!\n\n\t\t\t\t// calculate left/right vectors for checking at which side the obstacle is closer\n\t\t\t\tvar frontL = cr.localToWorld(5, -1, 0);\n\t\t\t\tvar frontR = cr.localToWorld(5, 1, 0);\n\t\t\t\tvar turnangle = Math.atan(1.0 / 5.0); //same as angle of \"looking\" (frontL,frontR)\n\t\t\t\tfrontL.sub(p.pos);\n\t\t\t\tfrontR.sub(p.pos);\n\t\t\t\tfrontL.normalize();\n\t\t\t\tfrontR.normalize();\n\n\t\t\t\tvar vFrontL = [frontL.x, frontL.y, frontL.z];\n\t\t\t\tvar vFrontR = [frontR.x, frontR.y, frontR.z];\n\n\t\t\t\t// calculate left/right points of collision\n\t\t\t\tvar interL = WorldMap.intersect(vCent, vFrontL, ExpProperties.obstacledist);\n\t\t\t\tvar interR = WorldMap.intersect(vCent, vFrontR, ExpProperties.obstacledist);\n\n\t\t\t\tvar dists = [10000, intersect[3], 10000]; //distances to obstacle towards left, center, right. 10000 means \"no obstacle seen\"\n\t\t\t\tif (interL)\n\t\t\t\t\tdists.set(0, interL[3]); //obstacle seen on left\n\t\t\t\tif (interR)\n\t\t\t\t\tdists.set(2, interR[3]); //obstacle seen on right\n\t\t\t\tvar i;\n\t\t\t\tvar max = 0;\n\t\t\t\tfor (i = 1; i < 3; i++) //choose the best direction to go based on 'dists'. Bigger values are better\n\t\t\t\t{\n\t\t\t\t\tvar k1 = dists[max];\n\t\t\t\t\tvar k2 = dists[i];\n\t\t\t\t\tif (k1 > k2)\n\t\t\t\t\t\t;\n\t\t\t\t\telse if (k1 < k2)\n\t\t\t\t\t\tmax = i; //wins bigger value\n\t\t\t\t\telse if (Math.rnd01 < 0.5) //equal values: wins random value\n\t\t\t\t\t\tmax = i;\n\t\t\t\t}\n\n\t\t\t\tif (dists[1] <= 3)\n\t\t\t\t\tturnangle *= 4.0 - dists[1]; //up to 4x sharper turns when obstacle is very close ahead\n\t\t\t\tvar angle = turnangle * (max - 1) * 10.0 * global_step_dt;\n\t\t\t\t//Simulator.print(\"dists=\"+dists+\"   max=\"+max+\"   angle=\"+angle);\n\t\t\t\tcr.rotateLocal(0, 0, angle);\n\t\t\t}\n\t\t}\n\t}\n\n\tlevelCreature(p, level_amount);\n\n\tif (p.x < 0 || p.y < 0 || p.x > World.wrldsiz || p.y > World.wrldsiz)\n\t{\n\t\tvar dir = (World.wrldsiz / 2, World.wrldsiz / 2, p.z);\n\t\tdir.sub(p.pos);\n\t\tdir.normalize();\n\t\tp.orient.betweenOV(p.orient, dir, 1.0 - 1.0 * global_step_dt);\n\t}\n\n\tif (p.z < 3 || p.z > ceiling)\n\t{\n\t\tvar dir = (p.oxx * 5.0, p.oxy * 5.0, 7.0 - p.z);\n\t\tdir.sub(p.pos);\n\t\tdir.normalize();\n\t\tp.orient.betweenOV(p.orient, dir, 1.0 - 1.0 * global_step_dt);\n\t\tif (p.z < 1.0)\n\t\t\tp.z = 1.0;\n\t}\n}\n\nfunction onStep()\n{\n\tvar pop = Populations[0];\n\tif (pop.size < ExpProperties.crcount)\n\t\tpop.add(\"//0\\nm:Vstyle=boid\\np:\");\n\telse if (pop.size > ExpProperties.crcount)\n\t\tpop.delete(0);\n}\n\nfunction ExpProperties_worldmap_set()\n{\n\tif (ExpProperties.worldmap == 0)\n\t\tWorld.wrldtyp = 0;\n\telse\n\t\tWorld.wrldtyp = 1;\n\tif (ExpProperties.worldmap == 5)\n\t\tWorld.wrldsiz = 45; //larger world for \"forest\"\n\telse\n\t\tWorld.wrldsiz = 35;\n\n\tvar b = \"0 \"; //bottom level\n\tvar T = \"\" + (ceiling + 2) + \" \"; //peak level\n\tvar t = \"\" + (ceiling * 4 / 5) + \" \"; //lower peak level\n\n\tswitch (ExpProperties.worldmap)\n\t{\n\tcase 0:     //empty\n\t\tWorld.wrldmap = \"\";\n\t\tbreak;\n\tcase 1:     //single peak\n\t\tWorld.wrldmap = \"M 3 3\\n\" + b + b + b + \"\\n\" + b + T + b + \"\\n\" + b + b + b;\n\t\tbreak;\n\tcase 2:     //three peaks\n\t\tWorld.wrldmap = \"M 3 3\\n\" + b + b + T + \"\\n\" + t + b + b + \"\\n\" + b + b + T;\n\t\tbreak;\n\tcase 3:     //four peaks\n\t\tWorld.wrldmap = \"M 3 3\\n\" + T + b + T + \"\\n\" + b + b + b + \"\\n\" + t + b + T;\n\t\tbreak;\n\tcase 4:     //corridor\n\t\tWorld.wrldmap = \"M 3 3\\n\" + T + b + T + \"\\n\" + T + b + T + \"\\n\" + T + b + t;\n\t\tbreak;\n\tcase 5:     //forest\n\t\tgenerateRandomWorld(20, 20, 0.02, ceiling + 2); //low density so that the flock can merge after being split by obstacles\n\t\tbreak;\n\t}\n}\n\n// Generates random block map\n// x, y - dimensions of the map\n// coverage - in percentage, how much of the map is covered with blocks, takes values from 0 to 1\n// height - blocks height\nfunction generateRandomWorld(x, y, coverage, height)\n{\n\tvar i, j, map = \"M \" + x + \" \" + y;\n\n\tfor (i = 0; i < y; i++)\n\t{\n\t\tmap += \"\\n\";\n\t\tfor (j = 0; j < x; j++)\n\t\t\tif (Math.rnd01 < coverage)\n\t\t\t\tmap += \" \" + height;\n\t\t\telse\n\t\t\t\tmap += \" 0\";\n\t}\n\n\tWorld.wrldmap = map;\n}\n",
+    "info": "Boids, developed by Craig Reynolds in 1986, is an artificial life program, simulating the flocking behaviour of birds.\n\nAs with most artificial life simulations, Boids is an example of emergent behaviour; that is, the complexity of Boids arises from the interaction of individual agents (the boids, in this case) adhering to a set of simple rules. The rules applied in the simplest Boids world are as follows:\n\n    * separation: steer to avoid crowding local flockmates\n    * alignment: steer towards the average heading of local flockmates\n    * cohesion: steer to move toward the average position of local flockmates\n\n(http://en.wikipedia.org/wiki/Boids)\n",
+    "_classname": "expdef",
+    "name": "Boids"
+  },
+  {
+    "type": "d 0 300 30",
+    "id": "crcount",
+    "_classname": "property",
+    "name": "Number of boids"
+  },
+  {
+    "type": "d 0 1 1",
+    "id": "rule1",
+    "_classname": "property",
+    "name": "Rule 1 - Separation"
+  },
+  {
+    "type": "d 0 1 1",
+    "id": "rule2",
+    "_classname": "property",
+    "name": "Rule 2 - Alignment"
+  },
+  {
+    "type": "d 0 1 1",
+    "id": "rule3",
+    "_classname": "property",
+    "name": "Rule 3 - Cohesion"
+  },
+  {
+    "type": "d 0 1 0",
+    "id": "rule4",
+    "_classname": "property",
+    "name": "Rule 4 - Obstacle avoidance"
+  },
+  {
+    "type": "f 1 10 6",
+    "id": "range",
+    "_classname": "property",
+    "name": "Neighborhood range"
+  },
+  {
+    "type": "f 1 10 2",
+    "id": "separ",
+    "_classname": "property",
+    "name": "Separation distance"
+  },
+  {
+    "type": "f 5 20 10",
+    "id": "obstacledist",
+    "_classname": "property",
+    "name": "Obstacle avoidance distance"
+  },
+  {
+    "type": "d 0 5 0 ~No obstacles~Single peak~Three peaks~Four peaks~Corridor~Forest",
+    "id": "worldmap",
+    "_classname": "property",
+    "name": "World setting"
+  }
+]

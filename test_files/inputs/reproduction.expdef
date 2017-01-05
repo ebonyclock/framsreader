@@ -1,0 +1,370 @@
+expdef:
+name:Evolution (endogenous fitness)
+info:~
+Evolution in a population with asexual reproduction. Each creature with a sufficient energy level produces a mutant offspring, which is born near its parent.
+Food is created at a constant rate and placed randomly.
+~
+code:~
+
+global foodenergywaiting;
+
+function onExpDefLoad()
+{
+	// define genotype and creature groups
+	GenePools[0].name = "Backup";
+
+	var pop = Populations[0];
+	pop.name = "Creatures";
+	pop.en_assim = 0;
+	pop.nnsim = 1;
+	pop.enableperf = 1;
+	pop.death = 1;
+	pop.energy = 1;
+	pop.selfmask = 0x10000;
+	pop.othermask = 0x0001; //does not match any selfmask - but nonzero, so Creature.boundingBoxCollisions() can also detect creatures
+
+	pop = Populations.addGroup("Food");
+	pop.nnsim = 0;
+	pop.enableperf = 0;
+	pop.death = 1;
+	pop.energy = 1;
+	pop.selfmask = 0;
+	pop.othermask = 0x10000; //collide with creatures
+
+	ExpProperties.initialgen = "ddGGGbblllfffX[0:2.420,2:-2,1 :-1][-1 :1,0:1,0:-1][-1:1](RRlllfffMMMX[|-1:-10]lllFFFMMMgggggX[|-2:-1],gggfffIXlllfffMMMsX[|6:10,3:-10](RRlllfffMMMIX[|-4:-10]lllFFFMMMIggggX[|-5:-1][S1:1],,RRlllfffMMMIX[|-7:10]lllFFFMMMIgggX[|-8:-1][S1:1]),RRlllfffMMMX[|-10:10]lllFFFMMMgggggX[|-11:-1.784])";
+	ExpState.food = ""; //needed only for simplified saving
+
+	World.wrldbnd = 0;
+}
+
+@include "standard_placement.inc"
+
+function onExpInit()
+{
+	GenePools[0].clear();
+	Populations[0].clear();
+	Populations[1].clear();
+	var cr = Populations[0].add(ExpProperties.initialgen);
+	cr.name = "Initial creature";
+	placeCreatureRandomly(cr, 0, 4);
+	ExpState.totaltestedcr = 0;
+	foodenergywaiting = ExpProperties.feede0;
+}
+
+
+function onCreaturesBorn(cr)
+{
+	cr.idleen = ExpProperties.e_meta;
+	cr.energy0 = ExpProperties.Energy0;
+	cr.energy = cr.energy0;
+	cr.data->children = 0;
+	cr.data->energy_eaten = 0.0;
+
+	if (ExpProperties.structured_output==1)
+	{
+		var dict={"Time":Simulator.stepNumber,"Pop0":Populations[0].size,"Pop1":Populations[1].size,"ID":cr.uid,"DiedCount":ExpState.totaltestedcr};
+		Simulator.print("[BORN] " + String.serialize(dict));
+	}
+}
+
+function foodGenotype()
+{
+	if (ExpProperties.foodgen == "")
+		return "//0\nm:Vstyle=food\np:";
+	else
+		return ExpProperties.foodgen;
+}
+
+function addfood()
+{
+	var cr = Populations[1].add(foodGenotype());
+
+// the 'style' parameter can be used to set a color of the food item (requires a *.style file that supports this):
+// Populations.createFromString("//0\nm:Vstyle=food(color=0)\np:");
+
+	cr.name = "Food";
+	cr.idleen = 0;
+	cr.energy0 = ExpProperties.feede0;
+	cr.energy = cr.energy0;
+
+	var retry = 50; //try 50 times
+	while (retry--)
+	{
+		placeCreatureRandomly(cr, 0, 0);
+		if (!cr.boundingBoxCollisions(0x10001)) //0x10001=="food and creatures". The default 0 would not detect food-vs-food collisions (because they normally don't collide in this experiment).
+			return cr;
+	}
+	Simulator.message("addfood() could not avoid collisions.", 1);
+	return cr;
+}
+
+function onStep()
+{
+	foodenergywaiting += ExpProperties.feedrate;
+	//Simulator.print("food energy waiting = "+foodenergywaiting);
+	if (foodenergywaiting > ExpProperties.feede0)
+	{
+		addfood();
+		foodenergywaiting = 0.0;
+		Simulator.checkpoint();
+	}
+
+	if (Populations[0].size == 0)
+	{
+		if (ExpProperties.autorestart)
+		{
+			Simulator.print("no more creatures, restarting...");
+			onExpInit();
+		}
+		else
+		{
+			Simulator.print("no more creatures, stopped.");
+			Simulator.stop();
+		}
+	}
+}
+
+function onCreaturesStep(cr)
+{
+	if (cr.energy >= ExpProperties.reprEnergy)
+	{
+		cr.data->children++;
+		var newcreature;
+		var operation_name;
+		var inherited;
+		if (Math.rnd01 * 100.0 > ExpProperties.p_mut)
+		{
+			operation_name = "cloning";
+			inherited = 1.0;
+			if (ExpProperties.structured_output==0)
+				Simulator.print("creating a clone of '" + cr.name + "'...");
+			newcreature = Populations[0].add(cr.geno);
+		}
+		else
+		{
+			operation_name = "mutation";
+			var g = GenMan.mutate(cr.geno);
+			if (g.is_valid)
+			{
+				if (ExpProperties.structured_output==0)
+					Simulator.print("creating a mutant... (" + g.info + ")");
+				inherited = 1.0 - String.parseFloat(String.split(g.info,"%")[0]) / 100.0;
+				newcreature = Populations[0].add(g);
+			}
+		}
+		if (newcreature != null)
+		{
+			if (ExpProperties.structured_output==1)
+			{
+				var dict={"Time":Simulator.stepNumber,"FromIDs":[cr.uid],"ID":newcreature.uid, "Inherited":[inherited], "Operation":operation_name};
+				Simulator.print("[OFFSPRING] " + String.serialize(dict));
+			}
+			
+			newcreature.energy0 = cr.energy / 2;
+			newcreature.energy = newcreature.energy0;
+			newcreature.locationSetBboxLow(cr.bboxLow.x + (cr.bboxSize.x - newcreature.bboxSize.x) / 2, cr.bboxLow.y + (cr.bboxSize.y - newcreature.bboxSize.y) / 2, cr.bboxLow.z + (cr.bboxSize.z - newcreature.bboxSize.z) / 2);
+			newcreature.rotate(0, 0, Math.rndUni(0, Math.twopi));
+			cr.energy = cr.energy / 2;
+		}
+	}
+}
+
+function onCreaturesDied(cr)
+{
+	ExpState.totaltestedcr++;
+	if (ExpProperties.structured_output==1)
+	{
+		var dict={"Time":Simulator.stepNumber,"Pop0":Populations[0].size,"Pop1":Populations[1].size,"ID":cr.uid,"Children":cr.data->children,"EnergyEaten":cr.data->energy_eaten,"Lifespan":cr.steps_in_lifespan,"DiedCount":ExpState.totaltestedcr};
+		Simulator.print("[DIED] " + String.serialize(dict));
+	}
+	else
+		Simulator.print("'" + cr.name + "' died... it had " + cr.data->children + " children");
+
+	if (ExpProperties.savedead==1)
+	{
+		var g = GenePools[0].add(cr.geno);
+		g.lifespan = cr.lifespan;
+		g.velocity = cr.velocity;
+		g.data = cr.data;
+		g.data["creature_uid"] = cr.uid;
+		g.instances = 1;
+	}
+}
+
+function onFoodCollision()
+{
+	var e = Collision.Part2.ing * ExpProperties.feedtrans;
+	var transferred = Collision.Creature1.transferEnergyTo(Collision.Creature2, e);
+	//Simulator.print("transferring "+transferred+" of energy from "+Collision.Creature1.name+" to "+Collision.Creature2.name+" ("+Collision.Creature2.energy+")");
+	Collision.Creature2.data->energy_eaten += transferred;
+}
+
+function onExpLoad()
+{
+	for (var pop in Populations)
+		pop.clear();
+
+	Loader.addClass(sim_params.*);
+	Loader.setBreakLabel(Loader.BeforeUnknown, "onExpLoad_Unknown");
+	Loader.run();
+
+	if (typeof(ExpState.food) == "Vector") //restore food locations and energy from saved vector
+		for(var f in ExpState.food)
+			if (f.size >= 3)
+			{
+				//x,y,energy
+				var food_cr = Populations[1].add(foodGenotype());
+				food_cr.locationSetBboxCenter(f[0],f[1],food_cr.bboxCenter.z);
+				food_cr.energy = f[2];
+				food_cr.energy0 = ExpProperties.feede0; //energy0 could be saved for each food just as energy is, but since energy0 is not saved, we assume it is set to the same ExpProperties.feede0 value for all food items
+			}
+
+	Simulator.print("Loaded " + Populations[0].size + " creatures and " + Populations[1].size + " food objects");
+}
+
+function onExpLoad_Unknown()
+{
+	if (Loader.objectName == "Creature")
+	{
+		Loader.currentObject = CreatureSnapshot.new();
+		Loader.loadObject();
+		Populations[0].add(Loader.currentObject);
+	}
+}
+
+function onExpSave()
+{
+	File.writeComment("saved by '%s.expdef'" % Simulator.expdef);
+
+	var tmpvec = [], i; //save food locations and energy in a simple, concise form (not as full Creature objects, but as a single vector)
+
+	for(var cr in Populations[1])
+		tmpvec.add([cr.bboxCenter.x, cr.bboxCenter.y, cr.energy]);
+
+	ExpState.food = tmpvec;
+	File.writeObject(sim_params.*);
+	ExpState.food = null; //vectors are only created for saving and then discarded
+
+	for (var cr in Populations[0])
+		File.writeObject(cr);
+}
+
+@include "standard_events.inc"
+
+~
+
+property:
+id:initialgen
+name:Initial genotype
+type:s 1
+
+property:
+id:creath
+name:Creation height
+type:f -1 50 0.1
+help:~
+Vertical position (above the surface) where new creatures are revived.
+Negative values are only used in the water area:
+  0   = at the surface
+-0.5 = half depth
+-1   = just above the bottom~
+
+property:
+id:p_mut
+name:Mutations
+type:f 0 100 50
+
+property:
+id:Energy0
+name:Starting energy
+type:f 0 10000 1000
+group:Energy
+help:Initial energy for the first creature
+
+property:
+id:reprEnergy
+name:Reproduction energy
+type:f 0 10000 1001
+group:Energy
+help:Creature produces an offspring when its energy level reaches this threshold
+
+property:
+id:e_meta
+name:Idle metabolism
+type:f 0 1 0.1
+group:Energy
+help:Each stick consumes this amount of energy in one time step
+
+property:
+id:feedrate
+name:Feeding rate
+type:f 0 100 0.4
+group:Energy
+help:How fast energy is created in the world
+
+property:
+id:feede0
+name:Food's energy
+group:Energy
+type:f 0 1000 100
+
+property:
+id:foodgen
+name:Food's genotype
+group:Energy
+type:s 1
+help:~
+The default food model is a simple, single part object:
+  //0
+  m:Vstyle=food
+  p:
+(this genotype is used when you leave this field blank).
+You can specify another genotype to create "intelligent" or mobile food.~
+
+property:
+id:feedtrans
+name:Ingestion multiplier
+group:Energy
+type:f 0 100 2
+
+property:
+id:savedead
+name:Save genotypes of dead creatures
+group:
+type:d 0 1 0
+
+property:
+id:structured_output
+name:Print structured messages
+help:Structured messages are dictionaries - they are easier for automated parsing than casual messages
+group:
+type:d 0 1 0
+
+property:
+id:autorestart
+name:Restart after extinction
+group:
+help:Restart automatically this experiment after the last creature has died?
+type:d 0 1 0
+
+state:
+id:notes
+name:Notes
+type:s 1
+help:~
+You can write anything here
+(it will be saved to the experiment file)~
+
+state:
+id:totaltestedcr
+name:Evaluated creatures
+help:Total number of the creatures evaluated in the experiment
+type:d
+flags:16
+
+state:
+id:food
+name:Food locations
+help:vector of vectors [x,y,energy]
+type:x
+flags:32

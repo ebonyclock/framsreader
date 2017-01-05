@@ -1,0 +1,90 @@
+[
+  {
+    "code": "\nglobal g_last_revive, g_newbest;\n\nfunction onExpDefLoad()\n{\n\t// define genotype and creature groups\n\tGenePools[0].name = \"Genotypes\";\n\tExpProperties.cr_v = 1;\n\tupdate_fitformula();\n\n\tvar p = Populations[0];\n\tp.name = \"Creatures\";\n\tp.nnsim = 2;\n\tp.enableperf = 2;\n\tp.selfmask = 0x10001;\n\tp.othermask = 0x20001;\n\n\tp = Populations.addGroup(\"Food\");\n\tp.nnsim = 0;\n\tp.enableperf = 0;\n\tp.selfmask = 0x20002;\n\tp.othermask = 0x10002;\n\t\n\tExpProperties.monitor_variable=\"fit\";\n}\n\nfunction onExpInit()\n{\n  Populations[0].clear();\n  Populations[1].clear();\n  GenePools[0].clear();\n  Genotype.newFromString(ExpProperties.initialgen).moveTo(GenePools[0]);\n  ExpState.totaltestedcr=0;\n  ExpState.totaltests=0;\n  ExpState.migrations=0;\n}\n\nfunction onStep()\n{\nif (GenePools[0].size==0)\n\t{ Simulator.stop(); Simulator.message(\"No genotypes, aborting\",2); return; } //should be in onStart() but stopping inside onStart() might be dangerous\n\n//Simulator.print(\"step...\");\nvar next_revive;\nif (g_newbest)\n\tnext_revive=g_last_revive+ExpProperties.revive_period_min;\nelse\n\tnext_revive=g_last_revive+ExpProperties.revive_period_max;\n\nif (Math.time >= next_revive)\n\tPopulations[0].clear();\n\nif (Populations[0].size<1)\n\t{\n\tPopulations[0].add(GenePools[0][0]);\n\tg_newbest=0;\n\t}\n\nif (Populations[0].size>0)\n\tif (Populations[0][0].perf==2) //while the creature is waiting for stabilization...\n\t\tg_last_revive=Math.time; //...do not count this time as the \"show time\" of the creature\n}\n\n@include \"standard_placement.inc\"\n\nfunction onBorn(cr)\n{\n\tconst TRIALS = 50; //try to find free place 50 times\n  var retry = TRIALS;\n  \n  var placed_ok = 0;\n  while (retry--)\n  {\n    var trycentral = (ExpProperties.placement == 1) && (retry == TRIALS - 1); //place central only in the first trial\n    placeCreatureRandomly(cr, trycentral, ExpProperties.rotation);\n    if (!cr.boundingBoxCollisions(0))\n      {placed_ok=1; break;}\n  }\n  if (!placed_ok)\n    Simulator.message(\"onBorn() could not avoid collisions.\", 1);\n\n  if (cr.population.index == 0)\n  { // creature\n    var n = cr.numjoints;\n    if (n == 0)\n      n = cr.numparts; //creatures with only one Part will live just as long as one-stick creatures\n    cr.idleen = ExpProperties.e_meta * n;\n    cr.energy0 = cr.energy0 * ExpProperties.Energy0 * n;\n    cr.energy = cr.energy0;\n  }\n  else\n  { // food\n    cr.name = \"Food\";\n    cr.idleen = 0;\n    cr.energy0 = ExpProperties.feede0;\n    cr.energy = cr.energy0;\n  }\n}\n\nfunction onStart()\n{\nSimulator.slaves.stopAll();\nSimulator.slaves.cancelAllEvents();\nSimulator.slaves.size=1;\n\nvar s=Simulator.slaves[0];\ns.genepools[0].clear();\ns.populations[0].clear();\ns.expdef=\"standard\";\n\nExpState.avg_value=GenePools[0].getStatsAvg(ExpProperties.monitor_variable);\nExpState.max_value=GenePools[0].getStatsMax(ExpProperties.monitor_variable);\n\nvar exported=Simulator.export(null,2+4+16+32,0,-1);// -1 = export all groups\n//Simulator.print(\"exported=\"+exported);\ns.import(\"string://\"+exported,2+4+8+16);\n\n//the following line overrides the slave experiment \"onDied\" function to call the original onDied (super_onDied) and then send the extended checkpoint data we want to use in onSlaveCheckpoint()\ns.usercode='''\nfunction onDied(cr)\n{\nvar g=super_onDied(cr); //call the original\nSimulator.checkpointData([GenePools[0].best().geno,\n\tcr.geno,\n\tg.[\"%s\"],\n\tGenePools[0].getStatsAvg(\"%s\"),\n\tGenePools[0].getStatsMax(\"%s\"),\n\tExpState.totaltestedcr,\n\tExpState.totaltests]);\n}\n''' % ExpProperties.monitor_variable % ExpProperties.monitor_variable % ExpProperties.monitor_variable;\n\nSimulator.slaves.startAll();\ng_last_revive=Math.time;\ng_newbest=0;\nSimulator.print(\"standard-background started\");\n}\n\nfunction onSlaveCheckpoint()\n{\n//Simulator.print(\"slave #\"+CheckpointEvent.index+\" checkpoint:\"+CheckpointEvent.data);\n//check if we got our extended information this time (standard.expdef's checkpointData still sends its basic data before our checkpointData call and we receive both)\nif (typeof(CheckpointEvent.data)==\"Vector\")\nif (typeof(CheckpointEvent.data[0])==\"Geno\")\n\t{\n\t//By using checkpointData the 2 simulators never wait for each other when transferring information from slave to master, which is the most common case. Accessing slave objects in a \"normal\" way (for example when changing settings) must be synchronized by stopping the slave, which means the master first waits for the slave to stop, then the slave waits for the master to finish accesing its objects before it can be started again.\n\tvar g=CheckpointEvent.data[0];\n\tif (GenePools[0][0].genotype!=g.genotype)\n\t\t{\n\t\tGenePools[0].clear();\n\t\tGenePools[0].add(g);\n\t\tg_newbest=1;\n\t\t}\n\tExpState.currentgeno=CheckpointEvent.data[1];\n\tExpState.currentvalue=CheckpointEvent.data[2];\n\tExpState.avg_value=CheckpointEvent.data[3];\n\tExpState.max_value=CheckpointEvent.data[4];\n\tExpState.totaltestedcr=CheckpointEvent.data[5];\n\tExpState.totaltests=CheckpointEvent.data[6];\n\tExpState.migrations++;\n\t}\n}\n\nfunction onStop()\n{\nSimulator.print(\"standard-background stopping\");\nSimulator.slaves.stopAll();\nSimulator.slaves.cancelAllEvents();\n\nvar s=Simulator.slaves[0];\nvar exported=s.export(null,2,0,-1);// 0 = export genepool 0\nGenePools[0].clear();\nSimulator.import(\"string://\"+exported,2);\nExpState.totaltestedcr=s.expstate.totaltestedcr;\nExpState.totaltests=s.expstate.totaltests;\nExpState.avg_value=GenePools[0].getStatsAvg(ExpProperties.monitor_variable);\nExpState.max_value=GenePools[0].getStatsMax(ExpProperties.monitor_variable);\nExpState.migrations++;\n}\n\nfunction ExpProperties_cleardata_call()\n{\n  for(var g in GenePools[0])\n     g.instances = 0;\n  Simulator.print(\"Performance data reset.\");\n}\n\n\n@include \"standard_fitformula.inc\"\n@include \"standard_loadsave.inc\"\n\n",
+    "info": "Runs the standard experiment in background at full speed while showing the current best creature living at normal speed.\nThe main thread simulation does not influence the evolution but shares the same settings. All genotypes and settings are transferred to the background simulation when starting, and genotypes are transferred back to the main simulator when stopping. The best genotype and selected statistics information (meant for evolution chart in AL-evol) is transferred after each death.\n",
+    "_classname": "expdef",
+    "name": "Evolutionary optimization (steady-state), in background"
+  },
+  {
+    "type": "p",
+    "id": "cleardata",
+    "_classname": "property",
+    "help": "Sets the number of instances of each genotype to zero (as if it has never been evaluated).\nGenotype performance values stay intact, yet they are meaningless if a genotype has no instances.",
+    "name": "Clear performance info"
+  },
+  {
+    "type": "f 1.0 30 6.0",
+    "id": "revive_period_min",
+    "_classname": "property",
+    "help": "Amount of time between replacing the living creature when a new best creature has evolved",
+    "name": "Revive period (min)"
+  },
+  {
+    "type": "f 1.0 30 15.0",
+    "id": "revive_period_max",
+    "_classname": "property",
+    "help": "Amount of time between replacing the living creature even if no new best creature has evolved",
+    "name": "Revive period (max)"
+  },
+  {
+    "type": "s",
+    "id": "monitor_variable",
+    "_classname": "property",
+    "help": "Name of the genotype field to be monitored",
+    "name": "Monitor variable"
+  },
+  {
+    "type": "d",
+    "flags": 16,
+    "name": "Migrations",
+    "id": "migrations",
+    "_classname": "state",
+    "help": "Number of migrations"
+  },
+  {
+    "type": "d",
+    "flags": 16,
+    "name": "Evaluated creatures",
+    "id": "totaltestedcr",
+    "_classname": "state",
+    "help": "Total number of creatures evaluated in the experiment"
+  },
+  {
+    "type": "d",
+    "flags": 16,
+    "name": "Number of evaluations",
+    "id": "totaltests",
+    "_classname": "state",
+    "help": "Total number of evaluations in the experiment.\nThis is equivalent to \"Evaluated creatures\" unless multiple evaluation is activated."
+  },
+  {
+    "type": "f",
+    "flags": 16,
+    "name": "Average value",
+    "id": "avg_value",
+    "_classname": "state",
+    "help": "Average value of the currently monitored statistics variable"
+  },
+  {
+    "type": "f",
+    "flags": 16,
+    "name": "Max value",
+    "id": "max_value",
+    "_classname": "state",
+    "help": "Maximum value of the currently monitored statistics variable"
+  },
+  {
+    "type": "x",
+    "id": "currentgeno",
+    "_classname": "state",
+    "flags": 34,
+    "name": "Currently evaluated geno"
+  },
+  {
+    "type": "x",
+    "id": "currentvalue",
+    "_classname": "state",
+    "flags": 34,
+    "name": "Currently evaluated value"
+  }
+]

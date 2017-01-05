@@ -1,0 +1,34 @@
+[
+  {
+    "code": "function onExpDefLoad()\n{\n  GenePools[0].name = \"Genotypes\";\n\n  var p=Populations[0];\n  p.name = \"Creatures\";\n  p.nnsim = 1;\n  p.enableperf = 1;\n  p.death = 1;\n  p.energy = 1; \n  p.selfmask = p.othermask = 1;\n\n  ExpState.current = 0;\n  ExpProperties.creath = 0.1;\n  ExpProperties.evaltime = 1000;\n}\n\nfunction onExpInit()\n{\n  for (var g in GenePools[0])\n    g.data->neuroanalysis = null;\n  ExpState.current = 0;\n}\n\n@include \"standard_loadsave.inc\"\n@include \"standard_placement.inc\"\n\nfunction onBorn(cr)\n{\n  var i, vec;\n  vec = Vector.new();\n  for (i = 0;i < cr.numneurons;i++)\n  {\n    vec.add(0); // num.samples\n    vec.add(0.0); // sum(x)\n    vec.add(0.0); // sum(x^2)\n  }\n  cr.data->neuroanalysis = vec;\n  cr.energy0 = 100;\n  cr.energy = cr.energy0;\n  cr.idleen = cr.energy0 / ExpProperties.evaltime;\n  placeCreatureRandomly(cr,0,4);\n}\n\nfunction onStep()\n{\n  var j, k, vec, s;\n  for (var cr in Populations[0])\n  {\n    vec = cr.data->neuroanalysis;\n    k = 0;\n    for (j = 0;j < cr.numneurons;j++)\n    {\n      var n=cr.getNeuro(j);\n      if (n)\n        s = n.state;\n      else\n        s = null;\n      vec[k] = vec[k] + 1;\n      k++;\n      vec[k] = vec[k] + s;\n      k++;\n      vec[k] = vec[k] + s*s;\n      k++;\n    }\n  }\n  if (Populations[0].size < 1)\n  {\n    if (ExpState.current >= GenePools[0].size)\n    {\n      Simulator.print(\"All genotypes analyzed.\");\n      Simulator.stop();\n    }\n    else\n    {\n      var g=GenePools[0][ExpState.current];\n      if (g.numneurons < 1)\n        ExpState.current++;\n      else\n        Populations[0].add(g);\n    }\n  }\n}\n\nfunction onDied(cr)\n{\n  var j, k = 0, vec, n, s2, s, sq;\n  var result = \"\";\n  vec = cr.data->neuroanalysis;\n  for (j = 0;j < cr.numneurons;j++)\n  {\n    n = vec[k];\n    s = vec[k + 1];\n    s2 = vec[k + 2];\n    result += j;\n    result += \"\\t\";\n    result += s / n;\n    result += \"\\t\";\n    \n    sq = s2 * n - s * s;\n    if (sq<0) sq=0.0; //protection against floating point inaccuracy, e.g. 1000.0*1000.0-1000.0*1000.0 gives a small negative number\n    result += Math.sqrt(sq / (n * (n - 1)));\n\n    result += \"\\n\";\n    k += 3;\n  }\n  var g=GenePools[0][ExpState.current];\n  g.info = \"Neuroanalysis results (\" + n + \" samples):\\nneuron\\taverage\\tstd.dev.\\n\" + result;\n  ExpState.current++;\n}\n\nfunction ExpProperties_restart_call()\n{\n  onExpInit();\n}\n\n",
+    "info": "This experiment evaluates all genotypes in the gene pool. During simulation, the output signal of each neuron is analyzed, and its average and standard deviation are computed. These data are then saved in the 'Info' field of the genotype.\n",
+    "_classname": "expdef",
+    "name": "Neuroanalysis"
+  },
+  {
+    "type": "d 100 100000",
+    "id": "evaltime",
+    "_classname": "property",
+    "name": "Evaluation time"
+  },
+  {
+    "type": "p",
+    "id": "restart",
+    "_classname": "property",
+    "name": "Restart from the first genotype"
+  },
+  {
+    "type": "d",
+    "id": "current",
+    "_classname": "state",
+    "flags": 16,
+    "name": "Evaluating genotype"
+  },
+  {
+    "type": "f -1 50",
+    "id": "creath",
+    "_classname": "property",
+    "help": "Vertical position (above the surface) where newborn creatures are placed.\nNegative values are only used in the water area:\n  0   = at the surface\n-0.5 = half depth\n-1   = just above the bottom",
+    "name": "Initial elevation"
+  }
+]

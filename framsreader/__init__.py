@@ -1,1 +1,1 @@
-from ._load import load, loads, parse_property
+from ._load import load, loads, default_parse

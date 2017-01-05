@@ -11,13 +11,15 @@ input_files_root = os.path.join(test_files_root, "inputs")
 output_files_root = os.path.join(test_files_root, "outputs")
 
 gen_input_files = [f for f in os.listdir(input_files_root) if f.endswith(".gen")]
-# gen_input_files = ["demo-chase.gen"]
-all_input_files = gen_input_files
+expdef_input_files = [f for f in os.listdir(input_files_root) if f.endswith(".expdef")]
+# all_input_files = ["simple.gen"]
+all_input_files = gen_input_files + expdef_input_files
 
 parser_testcases = [
     ('1', 1),
     ('0', 0),
     ('a', 'a'),
+    # TODO maybe tylda should be escaped?
     ('generic string ~ with tylda', 'generic string ~ with tylda'),
     ('123', 123),
     ('0x123', 0x123),
@@ -75,14 +77,14 @@ loads_exception_testcases = [
 class ReferenceTest(unittest.TestCase):
     def test0(self):
         str_in = '@Serialized:[^0] '
-        result = fr.parse_property(str_in)
+        result = fr.default_parse(str_in)
         self.assertTrue(isinstance(result, list))
         self.assertEqual(len(result), 1)
         self.assertTrue(result is result[0])
 
     def test1(self):
         str_in = '@Serialized:[44,[^1]]'
-        result = fr.parse_property(str_in)
+        result = fr.default_parse(str_in)
         self.assertTrue(isinstance(result, list))
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0], 44)
@@ -90,7 +92,7 @@ class ReferenceTest(unittest.TestCase):
 
     def test2(self):
         str_in = '@Serialized:[[100],["abc"],[300,^2]]'
-        result = fr.parse_property(str_in)
+        result = fr.default_parse(str_in)
         self.assertTrue(isinstance(result, list))
         self.assertEqual(len(result), 3)
         self.assertEqual(result[0], [100])
@@ -100,7 +102,7 @@ class ReferenceTest(unittest.TestCase):
 
     def test3(self):
         str_in = '@Serialized:[[123,[]],["x",^0],^2]'
-        result = fr.parse_property(str_in)
+        result = fr.default_parse(str_in)
         self.assertTrue(isinstance(result, list))
         self.assertEqual(len(result), 3)
         self.assertEqual(result[0], [123, []])
@@ -111,7 +113,7 @@ class ReferenceTest(unittest.TestCase):
 
     def test4(self):
         str_in = '@Serialized:{"a":[33,44],"b":^1,"c":[33,44]}'
-        result = fr.parse_property(str_in)
+        result = fr.default_parse(str_in)
         self.assertTrue(isinstance(result, dict))
         self.assertEqual(len(result), 3)
         self.assertListEqual(sorted(result.keys()), ["a", "b", "c"])
@@ -124,7 +126,7 @@ class ReferenceTest(unittest.TestCase):
 
     def test5(self):
         str_in = '@Serialized:[null, null, [1, 2], null, ^ 1]'
-        result = fr.parse_property(str_in)
+        result = fr.default_parse(str_in)
         self.assertTrue(isinstance(result, list))
         self.assertEqual(len(result), 5)
         self.assertListEqual(result[0:4], [None, None, [1, 2], None])
@@ -134,11 +136,11 @@ class ReferenceTest(unittest.TestCase):
 class ParseValueTest(unittest.TestCase):
     @parameterized.expand(parser_testcases)
     def test_correct_parsing(self, input_val, output):
-        self.assertEqual(output, fr.parse_property(input_val))
+        self.assertEqual(output, fr.default_parse(input_val))
 
     @parameterized.expand(parser_exception_testcases)
     def test_parsing_exceptions(self, input_val):
-        self.assertRaises(ValueError, fr.parse_property, input_val)
+        self.assertRaises(ValueError, fr.default_parse, input_val)
 
 
 class LoadsTest(unittest.TestCase):
@@ -155,7 +157,7 @@ class LoadTest(unittest.TestCase):
     @parameterized.expand(all_input_files)
     def test_correct_load(self, filename):
         file_path = os.path.join(input_files_root, filename)
-        json_path = os.path.join(output_files_root, filename.split(".")[0] + ".json")
+        json_path = os.path.join(output_files_root, filename + ".json")
         with self.subTest(i=file_path):
             result = fr.load(file_path)
             with open(json_path) as json_file:
