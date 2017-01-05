@@ -15,7 +15,7 @@ expdef_input_files = [f for f in os.listdir(input_files_root) if f.endswith(".ex
 # all_input_files = ["simple.gen"]
 all_input_files = gen_input_files + expdef_input_files
 
-parser_testcases = [
+default_parser_testcases = [
     ('1', 1),
     ('0', 0),
     ('a', 'a'),
@@ -58,7 +58,9 @@ parser_testcases = [
     ('@Serialized:Population<0x85f53a8>', 'Population<0x85f53a8>'),
     ('@Serialized:CrazyObject[{},{},[[]]]', 'CrazyObject[{},{},[[]]]')
 ]
-
+property_parser_testcases = [
+    ("",)
+]
 parser_exception_testcases = [
     '@Serialized:   '
 ]
@@ -134,8 +136,14 @@ class ReferenceTest(unittest.TestCase):
         self.assertTrue(result[2] is result[4])
 
 
-class ParseValueTest(unittest.TestCase):
-    @parameterized.expand(parser_testcases)
+class PropertyParseTest(unittest.TestCase):
+    @parameterized.expand(property_parser_testcases)
+    def test_correct_parsing(self, input_str,key, output):
+        self.assertEqual(output, fr.property_parse(input_str,key))
+
+
+class DefaultParseTest(unittest.TestCase):
+    @parameterized.expand(default_parser_testcases)
     def test_correct_parsing(self, input_val, output):
         self.assertEqual(output, fr.default_parse(input_val))
 

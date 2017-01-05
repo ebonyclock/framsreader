@@ -80,8 +80,34 @@ def extract_number(exp):
     return number, reminder
 
 
+# TODO maybe do it nicer??
 def extract_xyz(exp):
-    raise NotImplementedError()
+    exp = exp.strip()
+    if not exp.startswith('XYZ['):
+        # TODO msg
+        raise ValueError()
+    exp = exp[4:]
+    x , exp = extract_number(exp)
+    x = float(x)
+    exp = exp.strip()
+    if exp[0] != ',':
+        # TODO msg
+        raise ValueError()
+    exp = exp[1:]
+    y, exp = extract_number(exp)
+    y = float(y)
+    exp = exp.strip()
+    if exp[0] != ',':
+        # TODO msg
+        raise ValueError()
+    exp = exp[1:]
+    z, exp = extract_number(exp)
+    z = float(z)
+    exp = exp.strip()
+    if exp[0] != ']':
+        # TODO msg
+        raise ValueError()
+    return (x,y,z), exp[1:]
 
 
 def extract_reference(exp):
