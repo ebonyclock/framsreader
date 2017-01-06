@@ -139,7 +139,6 @@ def deserialize(expression):
 
     objects = []
     references = []
-    current_object_is_custom = False
     main_object_determined = False
     main_object = None
     expect_dict_value = False
