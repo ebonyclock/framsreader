@@ -15,7 +15,7 @@ expdef_input_files = [f for f in os.listdir(input_files_root) if f.endswith(".ex
 # all_input_files = ["simple.gen"]
 all_input_files = gen_input_files + expdef_input_files
 
-default_parser_testcases = [
+parse_value_testcases = [
     ('1', 1),
     ('0', 0),
     ('a', 'a'),
@@ -64,7 +64,7 @@ default_parser_testcases = [
     ('@Serialized:Population <0x85f53a8>', 'Population <0x85f53a8>'),
 ]
 
-default_parser_exception_testcases = [
+parse_value_exception_testcases = [
     '@Serialized:   '
 ]
 
@@ -78,25 +78,22 @@ loads_exception_testcases = [
     'class:\nmlprop:~\n'
 ]
 
-
-# TODO will this be needed at all?
-# property_parser_testcases = [
-#
-# ]
+context_parse_value_testcases = [
+]
 
 
 # TODO make more atomic tests, maybe
 class ReferenceTest(unittest.TestCase):
     def test0(self):
         str_in = '@Serialized:[^0] '
-        result = fr.default_parse(str_in)
+        result = fr.parse_value(str_in)
         self.assertTrue(isinstance(result, list))
         self.assertEqual(len(result), 1)
         self.assertTrue(result is result[0])
 
     def test1(self):
         str_in = '@Serialized:[44,[^1]]'
-        result = fr.default_parse(str_in)
+        result = fr.parse_value(str_in)
         self.assertTrue(isinstance(result, list))
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0], 44)
@@ -104,7 +101,7 @@ class ReferenceTest(unittest.TestCase):
 
     def test2(self):
         str_in = '@Serialized:[[100],["abc"],[300,^2]]'
-        result = fr.default_parse(str_in)
+        result = fr.parse_value(str_in)
         self.assertTrue(isinstance(result, list))
         self.assertEqual(len(result), 3)
         self.assertEqual(result[0], [100])
@@ -114,7 +111,7 @@ class ReferenceTest(unittest.TestCase):
 
     def test3(self):
         str_in = '@Serialized:[[123,[]],["x",^0],^2]'
-        result = fr.default_parse(str_in)
+        result = fr.parse_value(str_in)
         self.assertTrue(isinstance(result, list))
         self.assertEqual(len(result), 3)
         self.assertEqual(result[0], [123, []])
@@ -125,7 +122,7 @@ class ReferenceTest(unittest.TestCase):
 
     def test4(self):
         str_in = '@Serialized:{"a":[33,44],"b":^1,"c":[33,44]}'
-        result = fr.default_parse(str_in)
+        result = fr.parse_value(str_in)
         self.assertTrue(isinstance(result, dict))
         self.assertEqual(len(result), 3)
         self.assertListEqual(sorted(result.keys()), ["a", "b", "c"])
@@ -138,28 +135,27 @@ class ReferenceTest(unittest.TestCase):
 
     def test5(self):
         str_in = '@Serialized:[null, null, [1, 2], null, ^ 1]'
-        result = fr.default_parse(str_in)
+        result = fr.parse_value(str_in)
         self.assertTrue(isinstance(result, list))
         self.assertEqual(len(result), 5)
         self.assertListEqual(result[0:4], [None, None, [1, 2], None])
         self.assertTrue(result[2] is result[4])
 
 
-# TODO will this be needed at all?
-# class PropertyParseTest(unittest.TestCase):
-#     @parameterized.expand(property_parser_testcases)
-#     def test_correct_parsing(self, key, input_str, output):
-#         self.assertEqual(output, fr.property_parse(input_str, key))
-
-
-class DefaultParseTest(unittest.TestCase):
-    @parameterized.expand(default_parser_testcases)
+class ContextParseValueTest(unittest.TestCase):
+    @parameterized.expand(context_parse_value_testcases)
     def test_correct_parsing(self, input_val, output):
-        self.assertEqual(output, fr.default_parse(input_val))
+        self.assertEqual(output, fr.parse_value(input_val))
 
-    @parameterized.expand(default_parser_exception_testcases)
+
+class ParseValueTest(unittest.TestCase):
+    @parameterized.expand(parse_value_testcases)
+    def test_correct_parsing(self, input_val, output):
+        self.assertEqual(output, fr.parse_value(input_val))
+
+    @parameterized.expand(parse_value_exception_testcases)
     def test_parsing_exceptions(self, input_val):
-        self.assertRaises(ValueError, fr.default_parse, input_val)
+        self.assertRaises(ValueError, fr.parse_value, input_val)
 
 
 class LoadsTest(unittest.TestCase):

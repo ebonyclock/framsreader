@@ -1,3 +1,3 @@
-from ._all import load, loads, default_parse, property_parse
+from ._all import load, loads, parse_value
 
 __all__ = ["load", "loads"]

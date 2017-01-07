@@ -1,4 +1,6 @@
 import re as _re
+import warnings
+import os.path
 from collections import defaultdict
 
 _INT_FLOAT_REGEX = r'([+|-]?(?:0|[1-9]\d*))(\.\d+)?([eE][-+]?\d+)?'
@@ -11,17 +13,21 @@ _ESCAPED_QUOTE_REGEX = '\\\\"'
 _ESCAPED_TAB_REGEX = '\\\\t'
 _ESCAPED_NEWLINE_REGEX = '\\\\n'
 _ESCAPED_TYLDA_REGEX = '\\\\~'
+_FRAMSCRIPT_XML_PATH = os.path.join((os.path.dirname(__file__)), "framscript.xml")
+_AVAILABLE_CONTEXTS = ["expdef", "show", "style", "neuro", "script", "gen", "sim", "expt"]
+
+# Messages:
+# TODO
+_NO_FILE_EXTENSION_WARNING = "No file extension found. Setting default context."
+_UNSUPPORTED_EXTENSION_WARNING = "Unsupported file extension: '{}'. Setting default context."
 
 
-def _parse_simple_value(value):
-    assert isinstance(value, str)
-    try:
-        parsed_number = _str_to_number(value)
-        return parsed_number
-    except ValueError:
-        pass
+def _create_specs_from_xml():
+    # TODO read specs from framscript.xml to resolve ambiguities
+    return dict()
 
-    return value.strip()
+
+_specs = _create_specs_from_xml()
 
 
 def _str_to_number(s):
@@ -43,19 +49,23 @@ def _str_to_number(s):
     raise ValueError()
 
 
-def default_parse(value, *args, **kwargs):
+def parse_value(value, classname=None, key=None, context=None):
     assert isinstance(value, str)
-    if value.startswith("@Serialized:"):
-        prop = value.split(":", 1)[1]
-        prop = deserialize(prop)
-        return prop
+    if (classname, key, context) in _specs:
+        raise NotImplementedError()
     else:
-        return _parse_simple_value(value)
+        if value.startswith("@Serialized:"):
+            prop = value.split(":", 1)[1]
+            prop = deserialize(prop)
+            return prop
+        else:
+            try:
+                parsed_number = _str_to_number(value)
+                return parsed_number
+            except ValueError:
+                pass
 
-
-# TODO not needed perhaps?
-def property_parse(value, key):
-    raise NotImplementedError()
+            return value.strip()
 
 
 def _extract_string(exp):
@@ -136,7 +146,7 @@ def _extract_custom_object(exp):
 
     suffix_end_i = suffix_end_match.span()[0]
     i = 0
-    for i, c in enumerate(exp[suffix_end_i:],start=suffix_end_i):
+    for i, c in enumerate(exp[suffix_end_i:], start=suffix_end_i):
         if c == '<':
             open_pbrackets += 1
         elif c == '[':
@@ -276,7 +286,7 @@ def deserialize(expression):
     return main_object
 
 
-def loads(s, *args, **kwargs):
+def loads(s, context=None):
     assert isinstance(s, str)
     lines = s.split("\n")
     multiline_value = None
@@ -284,8 +294,7 @@ def loads(s, *args, **kwargs):
     current_object = None
     objects = []
     parsing_error = False
-    parse_functions = defaultdict(lambda: default_parse)
-    parse_fun = None
+    class_name = None
     for line_num, line in enumerate(lines):
         try:
             if multiline_key is not None:
@@ -326,7 +335,6 @@ def loads(s, *args, **kwargs):
                         # if suffix !="":
                         #     raise ValueError()
                         current_object = {"_classname": class_name}
-                        parse_fun = parse_functions[class_name]
                         objects.append(current_object)
                         continue
 
@@ -340,7 +348,7 @@ def loads(s, *args, **kwargs):
                         multiline_value = ""
                         multiline_key = key
                     else:
-                        value = parse_fun(value, key)
+                        value = parse_value(value, classname=class_name, key=key, context=context)
                         current_object[key] = value
 
         except ValueError:
@@ -356,8 +364,19 @@ def loads(s, *args, **kwargs):
     return objects
 
 
-def load(filename, *args, **kwargs):
+def load(filename):
     file = open(filename)
+    try:
+        _, ext = filename.split(".")
+        if ext not in _AVAILABLE_CONTEXTS:
+            context = None
+            warnings.warn(_UNSUPPORTED_EXTENSION_WARNING.format(ext))
+        else:
+            context = ext
+
+    except RuntimeError:
+        warnings.warn(_NO_FILE_EXTENSION_WARNING)
+        context = None
     s = file.read()
     file.close()
-    return loads(s, *args, **kwargs)
+    return loads(s, context=context)
