@@ -53,7 +53,7 @@ def default_parse(value, *args, **kwargs):
         return _parse_simple_value(value)
 
 
-def parse_property(value, key):
+def property_parse(value, key):
     raise NotImplementedError()
 
 

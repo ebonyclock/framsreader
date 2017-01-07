@@ -19,7 +19,7 @@ default_parser_testcases = [
     ('1', 1),
     ('0', 0),
     ('a', 'a'),
-    # TODO maybe tylda should be escaped?
+    # TODO maybe tylda should be escaped (it is only in multilne props)?
     ('generic string ~ with tylda', 'generic string ~ with tylda'),
     ('123', 123),
     ('0x123', 0x123),
@@ -54,14 +54,12 @@ default_parser_testcases = [
     ('@Serialized:{"a":123 }', {"a": 123}),
     ('@Serialized:{"a":123,"b":2 }', {"a": 123, "b": 2}),
     ('@Serialized:{"a":123,"b":[1,2,3] }', {"a": 123, "b": [1, 2, 3]}),
-    ('@Serialized:XYZ[0,1,2]', (0,1,2)),
+    ('@Serialized:XYZ[0,1,2]', (0, 1, 2)),
     ('@Serialized:Population<0x85f53a8>', 'Population<0x85f53a8>'),
     ('@Serialized:CrazyObject[{},{},[[]]]', 'CrazyObject[{},{},[[]]]')
 ]
-property_parser_testcases = [
-    ("",)
-]
-parser_exception_testcases = [
+
+default_parser_exception_testcases = [
     '@Serialized:   '
 ]
 
@@ -74,6 +72,11 @@ loads_exception_testcases = [
     'class:\nmlprop:~\n~\n~\n',
     'class:\nmlprop:~\n'
 ]
+
+# TODO will this be needed at all?
+# property_parser_testcases = [
+#
+# ]
 
 
 # TODO make more atomic tests, maybe
@@ -136,10 +139,11 @@ class ReferenceTest(unittest.TestCase):
         self.assertTrue(result[2] is result[4])
 
 
-class PropertyParseTest(unittest.TestCase):
-    @parameterized.expand(property_parser_testcases)
-    def test_correct_parsing(self, input_str,key, output):
-        self.assertEqual(output, fr.property_parse(input_str,key))
+# TODO will this be needed at all?
+# class PropertyParseTest(unittest.TestCase):
+#     @parameterized.expand(property_parser_testcases)
+#     def test_correct_parsing(self, key, input_str, output):
+#         self.assertEqual(output, fr.property_parse(input_str, key))
 
 
 class DefaultParseTest(unittest.TestCase):
@@ -147,7 +151,7 @@ class DefaultParseTest(unittest.TestCase):
     def test_correct_parsing(self, input_val, output):
         self.assertEqual(output, fr.default_parse(input_val))
 
-    @parameterized.expand(parser_exception_testcases)
+    @parameterized.expand(default_parser_exception_testcases)
     def test_parsing_exceptions(self, input_val):
         self.assertRaises(ValueError, fr.default_parse, input_val)
 
