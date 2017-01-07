@@ -1,16 +1,16 @@
 import re as _re
 from collections import defaultdict
 
-INT_FLOAT_REGEX = r'([+|-]?(?:0|[1-9]\d*))(\.\d+)?([eE][-+]?\d+)?'
-NATURAL_REGEX = r'(?:0|[1-9]\d*)'
-HEX_NUMBER_REGEX = r'[+|-]?0[xX][\da-fA-F]*'
-NUMBER_REGEX = '({}|{})'.format(HEX_NUMBER_REGEX, INT_FLOAT_REGEX)
-TYLDA_REGEX = '(?<![\\\\])(~)'
-QUOTE_REGEX = '(?<![\\\\])(")'
-ESCAPED_QUOTE_REGEX = '\\\\"'
-ESCAPED_TAB_REGEX = '\\\\t'
-ESCAPED_NEWLINE_REGEX = '\\\\n'
-ESCAPED_TYLDA_REGEX = '\\\\~'
+_INT_FLOAT_REGEX = r'([+|-]?(?:0|[1-9]\d*))(\.\d+)?([eE][-+]?\d+)?'
+_NATURAL_REGEX = r'(?:0|[1-9]\d*)'
+_HEX__NUMBER_REGEX = r'[+|-]?0[xX][\da-fA-F]*'
+_NUMBER_REGEX = '({}|{})'.format(_HEX__NUMBER_REGEX, _INT_FLOAT_REGEX)
+_TYLDA_REGEX = '(?<![\\\\])(~)'
+_QUOTE_REGEX = '(?<![\\\\])(")'
+_ESCAPED_QUOTE_REGEX = '\\\\"'
+_ESCAPED_TAB_REGEX = '\\\\t'
+_ESCAPED_NEWLINE_REGEX = '\\\\n'
+_ESCAPED_TYLDA_REGEX = '\\\\~'
 
 
 def _parse_simple_value(value):
@@ -59,21 +59,21 @@ def property_parse(value, key):
 
 def extract_string(exp):
     exp = exp[1:]
-    str_end_match = _re.search(QUOTE_REGEX, exp)
+    str_end_match = _re.search(_QUOTE_REGEX, exp)
     if str_end_match is None:
         # TODO msg
         raise ValueError()
     str_end = str_end_match.span()[0]
     s = exp[:str_end]
     reminder = exp[str_end + 1:]
-    s = _re.sub(ESCAPED_QUOTE_REGEX, '"', s)
-    s = _re.sub(ESCAPED_TAB_REGEX, '\t', s)
-    s = _re.sub(ESCAPED_NEWLINE_REGEX, '\n', s)
+    s = _re.sub(_ESCAPED_QUOTE_REGEX, '"', s)
+    s = _re.sub(_ESCAPED_TAB_REGEX, '\t', s)
+    s = _re.sub(_ESCAPED_NEWLINE_REGEX, '\n', s)
     return s, reminder
 
 
 def extract_number(exp):
-    match = _re.match(NUMBER_REGEX, exp)
+    match = _re.match(_NUMBER_REGEX, exp)
     number_as_str = match.group()
     reminder = exp[match.span()[1]:]
     number = _str_to_number(number_as_str)
@@ -112,7 +112,7 @@ def extract_xyz(exp):
 
 def extract_reference(exp):
     exp = exp[1:].strip()
-    i_match = _re.match(NATURAL_REGEX, exp)
+    i_match = _re.match(_NATURAL_REGEX, exp)
     if i_match is None:
         # TODO msg
         raise ValueError()
@@ -201,7 +201,7 @@ def deserialize(expression):
             exp = exp[1:]
         elif exp[0] == '"':
             current_object, exp = extract_string(exp)
-        elif _re.match(NUMBER_REGEX, exp) is not None:
+        elif _re.match(_NUMBER_REGEX, exp) is not None:
             current_object, exp = extract_number(exp)
         # TODO move to separate function
         elif exp[0] == '^':
@@ -259,7 +259,7 @@ def loads(s, *args, **kwargs):
     for line_num, line in enumerate(lines):
         try:
             if multiline_key is not None:
-                endmatch = _re.search(TYLDA_REGEX, line)
+                endmatch = _re.search(_TYLDA_REGEX, line)
                 if endmatch is not None:
                     endi = endmatch.span()[0]
                     value = line[0:endi]
@@ -270,10 +270,10 @@ def loads(s, *args, **kwargs):
                 else:
                     value = line + "\n"
 
-                if _re.search(TYLDA_REGEX, value) is not None:
+                if _re.search(_TYLDA_REGEX, value) is not None:
                     # TODO msg
                     raise ValueError()
-                value = _re.sub(ESCAPED_TYLDA_REGEX, '~', value)
+                value = _re.sub(_ESCAPED_TYLDA_REGEX, '~', value)
                 multiline_value += value
                 if endmatch is not None:
                     current_object[multiline_key] = multiline_value
