@@ -53,11 +53,12 @@ def default_parse(value, *args, **kwargs):
         return _parse_simple_value(value)
 
 
+# TODO not needed perhaps?
 def property_parse(value, key):
     raise NotImplementedError()
 
 
-def extract_string(exp):
+def _extract_string(exp):
     exp = exp[1:]
     str_end_match = _re.search(_QUOTE_REGEX, exp)
     if str_end_match is None:
@@ -72,7 +73,7 @@ def extract_string(exp):
     return s, reminder
 
 
-def extract_number(exp):
+def _extract_number(exp):
     match = _re.match(_NUMBER_REGEX, exp)
     number_as_str = match.group()
     reminder = exp[match.span()[1]:]
@@ -81,36 +82,36 @@ def extract_number(exp):
 
 
 # TODO maybe do it nicer??
-def extract_xyz(exp):
+def _extract_xyz(exp):
     exp = exp.strip()
     if not exp.startswith('XYZ['):
         # TODO msg
         raise ValueError()
     exp = exp[4:]
-    x , exp = extract_number(exp)
+    x, exp = _extract_number(exp)
     x = float(x)
     exp = exp.strip()
     if exp[0] != ',':
         # TODO msg
         raise ValueError()
     exp = exp[1:]
-    y, exp = extract_number(exp)
+    y, exp = _extract_number(exp)
     y = float(y)
     exp = exp.strip()
     if exp[0] != ',':
         # TODO msg
         raise ValueError()
     exp = exp[1:]
-    z, exp = extract_number(exp)
+    z, exp = _extract_number(exp)
     z = float(z)
     exp = exp.strip()
     if exp[0] != ']':
         # TODO msg
         raise ValueError()
-    return (x,y,z), exp[1:]
+    return (x, y, z), exp[1:]
 
 
-def extract_reference(exp):
+def _extract_reference(exp):
     exp = exp[1:].strip()
     i_match = _re.match(_NATURAL_REGEX, exp)
     if i_match is None:
@@ -190,7 +191,7 @@ def deserialize(expression):
             current_object = None
             exp = exp[4:]
         elif exp.startswith("XYZ"):
-            current_object, exp = extract_xyz(exp)
+            current_object, exp = _extract_xyz(exp)
         elif exp[0] == "[":
             current_object = list()
             opened_lists += 1
@@ -200,12 +201,12 @@ def deserialize(expression):
             opened_dicts += 1
             exp = exp[1:]
         elif exp[0] == '"':
-            current_object, exp = extract_string(exp)
+            current_object, exp = _extract_string(exp)
         elif _re.match(_NUMBER_REGEX, exp) is not None:
-            current_object, exp = extract_number(exp)
+            current_object, exp = _extract_number(exp)
         # TODO move to separate function
         elif exp[0] == '^':
-            i, exp = extract_reference(exp)
+            i, exp = _extract_reference(exp)
             if i >= len(references):
                 # TODO msg
                 raise ValueError()
@@ -228,7 +229,7 @@ def deserialize(expression):
                         raise ValueError()
                     last_dict_key = current_object
                     expect_dict_value = True
-        # TODO support for other types of objects?
+
         if isinstance(current_object, (list, dict, tuple)) and not current_object_is_reference:
             objects.append(current_object)
             references.append(current_object)
