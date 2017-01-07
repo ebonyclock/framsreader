@@ -124,8 +124,38 @@ def _extract_reference(exp):
     return ref_index, reminder
 
 
-def extract_custom_object(exp):
-    raise NotImplementedError()
+def _extract_custom_object(exp):
+    open_braces = 0
+    open_sbrackets = 0
+    open_pbrackets = 0
+    # TODO maybe do it smarter?
+    suffix_end_match = _re.search('<|\[|\{]', exp)
+    if suffix_end_match is None:
+        # TODO
+        raise ValueError()
+
+    suffix_end_i = suffix_end_match.span()[0]
+    i = 0
+    for i, c in enumerate(exp[suffix_end_i:],start=suffix_end_i):
+        if c == '<':
+            open_pbrackets += 1
+        elif c == '[':
+            open_sbrackets += 1
+        elif c == '{':
+            open_braces += 1
+        elif c == '>':
+            open_pbrackets -= 1
+        elif c == ']':
+            open_sbrackets -= 1
+        elif c == '}':
+            open_braces -= 1
+
+        if open_braces == 0 and open_sbrackets == 0 and open_pbrackets == 0:
+            break
+    if open_braces != 0 or open_sbrackets != 0 or open_pbrackets != 0:
+        # TODO
+        raise ValueError()
+    return exp[0:i + 1], exp[i + 1:]
 
 
 def deserialize(expression):
@@ -204,7 +234,6 @@ def deserialize(expression):
             current_object, exp = _extract_string(exp)
         elif _re.match(_NUMBER_REGEX, exp) is not None:
             current_object, exp = _extract_number(exp)
-        # TODO move to separate function
         elif exp[0] == '^':
             i, exp = _extract_reference(exp)
             if i >= len(references):
@@ -213,7 +242,7 @@ def deserialize(expression):
             current_object = references[i]
             current_object_is_reference = True
         else:
-            current_object, reminder = extract_custom_object(exp)
+            current_object, exp = _extract_custom_object(exp)
 
         if len(objects) > 0:
             if isinstance(objects[-1], list):

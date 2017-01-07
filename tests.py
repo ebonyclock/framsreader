@@ -56,7 +56,12 @@ default_parser_testcases = [
     ('@Serialized:{"a":123,"b":[1,2,3] }', {"a": 123, "b": [1, 2, 3]}),
     ('@Serialized:XYZ[0,1,2]', (0, 1, 2)),
     ('@Serialized:Population<0x85f53a8>', 'Population<0x85f53a8>'),
-    ('@Serialized:CrazyObject[{},{},[[]]]', 'CrazyObject[{},{},[[]]]')
+    ('@Serialized:CrazyObject[{},{},[[]]]', 'CrazyObject[{},{},[[]]]'),
+    ('@Serialized:[co[{},{},[[]]],[]]', ['co[{},{},[[]]]', []]),
+    ('@Serialized:[co[{},{},[[]]],[1,2,3]]', ['co[{},{},[[]]]', [1, 2, 3]]),
+    ('@Serialized:[[1,2, 3],  co[{},{},[[]]]]', [[1, 2, 3], 'co[{},{},[[]]]']),
+    # TODO maybe throw if there is a space?
+    ('@Serialized:Population <0x85f53a8>', 'Population <0x85f53a8>'),
 ]
 
 default_parser_exception_testcases = [
@@ -72,6 +77,7 @@ loads_exception_testcases = [
     'class:\nmlprop:~\n~\n~\n',
     'class:\nmlprop:~\n'
 ]
+
 
 # TODO will this be needed at all?
 # property_parser_testcases = [
