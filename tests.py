@@ -62,8 +62,12 @@ parse_value_testcases = [
     ('@Serialized:[[1,2, 3],  co[{},{},[[]]]]', [[1, 2, 3], 'co[{},{},[[]]]']),
     # TODO maybe throw if there is a space?
     ('@Serialized:Population <0x85f53a8>', 'Population <0x85f53a8>'),
-]
 
+]
+context_parse_value_testcases = [
+    ({'value': '1', 'classname': 'expdef', 'key': 'name', 'context': 'expdef file'}, '1'),
+    ({'value': '234.5', 'classname': 'Creature', 'key': 'energ0', 'context': 'Global Context'}, 234.5)
+]
 parse_value_exception_testcases = [
     '@Serialized:   '
 ]
@@ -76,9 +80,6 @@ loads_exception_testcases = [
     'class:\nmlprop:~\n\\~\n~\nasdasd',
     'class:\nmlprop:~\n~\n~\n',
     'class:\nmlprop:~\n'
-]
-
-context_parse_value_testcases = [
 ]
 
 
@@ -142,16 +143,14 @@ class ReferenceTest(unittest.TestCase):
         self.assertTrue(result[2] is result[4])
 
 
-class ContextParseValueTest(unittest.TestCase):
-    @parameterized.expand(context_parse_value_testcases)
-    def test_correct_parsing(self, input_val, output):
-        self.assertEqual(output, fr.parse_value(input_val))
-
-
 class ParseValueTest(unittest.TestCase):
     @parameterized.expand(parse_value_testcases)
     def test_correct_parsing(self, input_val, output):
         self.assertEqual(output, fr.parse_value(input_val))
+
+    @parameterized.expand(context_parse_value_testcases)
+    def test_correct_context_parsing(self, input_val, output):
+        self.assertEqual(output, fr.parse_value(**input_val))
 
     @parameterized.expand(parse_value_exception_testcases)
     def test_parsing_exceptions(self, input_val):

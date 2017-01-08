@@ -47,7 +47,6 @@ def _create_specs_from_xml():
         if (context, classname) not in specs:
             specs[(context, classname)] = dict()
 
-        simple_types = ["string", "integer", "float"]
         for element in [e for e in child if e.tag == "element" and "type" in e.attrib]:
             key = element.attrib["name"]
             spec = dict()
@@ -109,6 +108,7 @@ def _str_to_number(s):
 def parse_value(value, classname=None, key=None, context=None):
     assert isinstance(value, str)
 
+    # TODO maybe check 'Global context' as well?
     if (context, classname) in _specs:
         spec = _specs[(context, classname)]
         if key in spec:
