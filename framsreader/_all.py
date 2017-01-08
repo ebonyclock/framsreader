@@ -1,7 +1,7 @@
 import re as _re
+import xml.etree.ElementTree as _et
 import warnings
 import os.path
-from collections import defaultdict
 
 warnings.simplefilter('always', UserWarning)
 
@@ -16,7 +16,8 @@ _ESCAPED_TAB_REGEX = '\\\\t'
 _ESCAPED_NEWLINE_REGEX = '\\\\n'
 _ESCAPED_TYLDA_REGEX = '\\\\~'
 _FRAMSCRIPT_XML_PATH = os.path.join((os.path.dirname(__file__)), "framscript.xml")
-_AVAILABLE_CONTEXTS = ["expdef", "show", "style", "neuro", "script", "gen", "sim", "expt"]
+_AVAILABLE_CONTEXTS = ["expdef file", "show file", "style file", "neuro file", "script file", "gen file", "sim file",
+                       "expt file"]
 
 # Messages:
 _NO_FILE_EXTENSION_WARNING = "No file extension found. Setting default context."
@@ -30,15 +31,61 @@ _NO_OBJECT_ERROR = "No object defined for the current line."
 _XYZ_ERROR = "XYZ format should look like this: XYZ[ a,b,c], Got: '{}'"
 _REFERENCE_FORMAT_ERROR = "reference sign '^' should be followed by an integer. Got: {}"
 _COLON_EXPECTED_ERROR = "Colon ':' was expected. Got: {}"
+_MIN_VAL_EXCEEDED_ERROR = "Minimum value allowed: {}, got: {}"
+_MAX_VAL_EXCEEDED_ERROR = "Maximum value allowed: {}, got: {}"
 
 
 def _create_specs_from_xml():
-    specs = dict()
-    # TODO read specs from framscript.xml to resolve ambiguities
+    specs = {}
+    root = _et.parse(_FRAMSCRIPT_XML_PATH).getroot()
+    assert root.tag == "framscript"
+    for child in root:
+        assert child.tag == "type"
+        context = child.attrib["context"]
+        classname = child.attrib["name"]
+        context_key = (context, classname)
+        if (context, classname) not in specs:
+            specs[(context, classname)] = dict()
+
+        simple_types = ["string", "integer", "float"]
+        for element in [e for e in child if e.tag == "element" and "type" in e.attrib]:
+            key = element.attrib["name"]
+            spec = dict()
+            dtype = element.attrib["type"]
+            if dtype == "string":
+                spec["dtype"] = str
+            elif dtype == "integer":
+                spec["dtype"] = int
+            elif dtype == "float":
+                spec["dtype"] = float
+            else:
+                continue
+            if "min" in element.attrib:
+                spec["min"] = element.attrib["min"]
+            if "max" in element.attrib:
+                spec["max"] = element.attrib["max"]
+            # # is default needed?
+            # if "default" in element.attrib:
+            #     spec["default"] = element.attrib["default"]
+            specs[context_key][key] = spec
     return specs
 
 
 _specs = _create_specs_from_xml()
+
+
+def _create_generic_parser(dtype, min=None, max=None):
+    def parse(x):
+        x = dtype(x)
+        if min is not None:
+            if x < min:
+                raise ValueError(_MIN_VAL_EXCEEDED_ERROR.format(min, x))
+        if max is not None:
+            if x > max:
+                raise ValueError(_MAX_VAL_EXCEEDED_ERROR.format(max, x))
+        return x
+
+    return parse
 
 
 def _str_to_number(s):
@@ -65,7 +112,8 @@ def parse_value(value, classname=None, key=None, context=None):
     if (context, classname) in _specs:
         spec = _specs[(context, classname)]
         if key in spec:
-            raise NotImplementedError()
+            parser = _create_generic_parser(**spec[key])
+            return parser(value)
         else:
             warnings.warn(_UNEXPECTED_KEY_WARNING.format(key, classname, context))
 
@@ -373,13 +421,11 @@ def load(filename, context=None):
     file = open(filename)
     if context is None:
         try:
-            _, ext = filename.split(".")
-            if ext not in _AVAILABLE_CONTEXTS:
+            _, extension = filename.split(".")
+            context = extension + " file"
+            if context not in _AVAILABLE_CONTEXTS:
                 context = None
-                warnings.warn(_UNSUPPORTED_EXTENSION_WARNING.format(ext))
-            else:
-                context = ext
-
+                warnings.warn(_UNSUPPORTED_EXTENSION_WARNING.format(extension))
         except RuntimeError:
             warnings.warn(_NO_FILE_EXTENSION_WARNING)
             context = None
