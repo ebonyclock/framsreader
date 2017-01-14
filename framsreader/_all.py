@@ -105,7 +105,7 @@ def _str_to_number(s):
     raise ValueError(_NOT_A_NUMBER_ERROR.format(s))
 
 
-def parse_value(value, classname=None, key=None, context=None):
+def parse_value(value, classname=None, key=None, context=None, autoparse=True):
     assert isinstance(value, str)
 
     # TODO maybe check 'Global context' as well?
@@ -121,14 +121,13 @@ def parse_value(value, classname=None, key=None, context=None):
         prop = value.split(":", 1)[1]
         prop = deserialize(prop)
         return prop
-    else:
+    elif autoparse:
         try:
             parsed_number = _str_to_number(value)
             return parsed_number
         except ValueError:
             pass
-
-        return value.strip()
+    return value.strip()
 
 
 def _extract_string(exp):
@@ -340,7 +339,7 @@ def deserialize(expression):
     return main_object
 
 
-def loads(s, context=None):
+def loads(s, context=None, autoparse=True):
     assert isinstance(s, str)
     lines = s.split("\n")
     multiline_value = None
@@ -402,7 +401,7 @@ def loads(s, context=None):
                         multiline_value = ""
                         multiline_key = key
                     else:
-                        value = parse_value(value, classname=class_name, key=key, context=context)
+                        value = parse_value(value, classname=class_name, key=key, context=context, autoparse=autoparse)
                         current_object[key] = value
 
         except ValueError:
@@ -417,7 +416,7 @@ def loads(s, context=None):
     return objects
 
 
-def load(filename, context=None):
+def load(filename, context=None, autoparse=True):
     file = open(filename)
     if context is None:
         try:
@@ -431,4 +430,4 @@ def load(filename, context=None):
             context = None
     s = file.read()
     file.close()
-    return loads(s, context=context)
+    return loads(s, context=context, autoparse=autoparse)
