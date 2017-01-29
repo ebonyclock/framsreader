@@ -1,0 +1,19 @@
+[
+  {
+    "prefinputs": 1,
+    "description": "Sample custom neuron class. This one works just like the \"D\" neuron.",
+    "name": "D_Test",
+    "_classname": "class",
+    "prefoutput": 1,
+    "code": "function init()\n{}\n\nfunction go()\n{\n  Neuro.state = NeuroProperties.prev;\n  NeuroProperties.prev = Neuro.weightedInputSum;\n}\n",
+    "icon": "24,3,3,25,0,25,100,75,50,25,0,1,75,50,100,50,3,44,42,51,57,36,57,44,42",
+    "longname": "Difference"
+  },
+  {
+    "id": "prev",
+    "_classname": "property",
+    "flags": 32,
+    "type": "f",
+    "name": "previous input value"
+  }
+]

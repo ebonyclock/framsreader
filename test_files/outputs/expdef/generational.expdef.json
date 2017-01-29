@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Evolutionary optimization (generational)",
+    "_classname": "expdef",
+    "info": "A simple \"genetic algorithm\" experiment:\n\n- two gene pools (previous and current generation)\n- one population for individuals\n- generational replacement of genotypes\n- selection: roulette, random, tournament\n- fitness formula entered directly into the group's field\n",
+    "code": "\n@include \"standard_placement.inc\"\n@include \"standard_select.inc\"\n@include \"standard_loadsave.inc\"\n\nfunction onExpDefLoad()\n{\n  var g=GenePools[0];\n  g.name = \"Current generation\";\n  g.fitness = \"return this.velocity;\";\n  g = GenePools.addGroup(\"Previous generation\");\n  g.fitness = \"return this.velocity;\";\n\n  var p=Populations[0];\n  p.name = \"Creatures\";\n  p.nnsim = 1;\n  p.enableperf = 1;\n  p.death = 1;\n  p.energy = 1; \n  p.selfmask = p.othermask = 1;\n\n  ExpProperties.initialgen = \"X\";\n  ExpProperties.capacity = 100;\n  ExpProperties.creath = 0.1;\n  ExpProperties.p_nop = 20;\n  ExpProperties.p_mut = 64;\n  ExpProperties.p_xov = 16;\n  ExpProperties.selrule = 2;\n  ExpProperties.evaltime = 1000;\n  ExpState.epoch = 0;\n  ExpState.current = 0;\n}\n\nfunction onExpInit()\n{\n  var i;\n  Populations[0].clear();\n  GenePools[0].clear();\n  GenePools[1].clear();\n  var g=Geno.newFromString(ExpProperties.initialgen);\n  for (i = 0;i < ExpProperties.capacity;i++)\n    GenePools[0].add(g);\n  ExpState.current = 0;\n  ExpState.epoch = 0;\n}\n\nfunction onBorn(cr)\n{\n  placeCreatureRandomly(cr,0,4);\n  cr.energy0 = 100;\n  cr.energy = cr.energy0;\n  cr.idleen = cr.energy0 / ExpProperties.evaltime;\n}\n\nfunction onStep()\n{\n  if (Populations[0].size < 1)\n    Populations[0].add(GenePools[0][ExpState.current]);;\n}\n\nfunction onDied(cr)\n{\n  var g=GenePools[0][ExpState.current];\n  g.instances = 0;\n  g.addPerformanceFromCreature(cr);\n\n  ExpState.current++;\n\n  if (ExpState.current >= GenePools[0].size)\n    prepareNewEpoch();\n}\n\nfunction prepareNewEpoch()\n{\n  var i;\n  GenePools[1].clear();\n  for (var g in GenePools[0])\n     GenePools[1].add(g);\n  GenePools[0].clear();\n  var retry=100;\n  while (GenePools[0].size < ExpProperties.capacity)\n  {\n    var g=selectGenotype();\n    if (g==null)\n      {\n      retry--;\n      if (retry<0)\n         {\n\t Simulator.message(\"Failed to select a genotype, stopping\",2);\n\t Simulator.stop();\n\t return;\n\t }\n      continue;\n      }\n    if (g.is_valid)\n      GenePools[0].add(g);\n  }\n  ExpState.epoch++;\n  ExpState.current = 0;\n  Simulator.checkpoint();\n}\n\nfunction selectGenotype()\n{\n  var sel;\n  sel = (ExpProperties.p_nop + ExpProperties.p_mut + ExpProperties.p_xov) * Math.rnd01;\n  if (sel < ExpProperties.p_nop)\n    return selectedForCreationInPool(GenePools[1]);\n\n  sel = sel - ExpProperties.p_nop;\n  if (sel < ExpProperties.p_mut)\n     {\n     var selected=selectedForCreationInPool(GenePools[1]);\n     if (selected)\n        {\n        var g=Genotype.newFromGeno(GenMan.mutate(selected.geno));\n        g.gnum=selected.gnum+1; //generation\n        return g;\n        }\n     return null;\n     }\n\n  var first=selectedForCreationInPool(GenePools[1]);\n  var other = selectedForCreationInPool(GenePools[1]);\n  if ((first!=null) && (other!=null))\n     {\n     var g=Genotype.newFromGeno(GenMan.crossOver(first.geno, other.geno));\n     if (!g.is_valid)\n        return null;\n     g.gnum=Math.max(first.gnum,other.gnum)+1; //generation\n     return g;\n     }\n\n  return null;\n}\n\nfunction ExpProperties_reset_call()\n{\n  ExpState.current = 0;\n  Populations.clearGroup(0);\n}\n\n"
+  },
+  {
+    "id": "initialgen",
+    "_classname": "property",
+    "type": "s 1",
+    "name": "Initial genotype"
+  },
+  {
+    "id": "capacity",
+    "_classname": "property",
+    "type": "d 1 2000",
+    "name": "Gene pool size"
+  },
+  {
+    "id": "p_nop",
+    "_classname": "property",
+    "type": "f 0 100",
+    "group": "Selection",
+    "name": "Unchanged"
+  },
+  {
+    "id": "p_mut",
+    "_classname": "property",
+    "type": "f 0 100",
+    "group": "Selection",
+    "name": "Mutated"
+  },
+  {
+    "id": "p_xov",
+    "_classname": "property",
+    "type": "f 0 100",
+    "group": "Selection",
+    "name": "Crossed over"
+  },
+  {
+    "id": "selrule",
+    "group": "Selection",
+    "help": "Positive selection: how to choose genotypes for cloning/mutation/crossover",
+    "name": "Selection rule",
+    "_classname": "property",
+    "type": "d 0 5 ~Random~Fitness-proportional (roulette)~Tournament (2 genotypes)~Tournament (3 genotypes)~Tournament (4 genotypes)~Tournament (5 genotypes)"
+  },
+  {
+    "id": "evaltime",
+    "_classname": "property",
+    "type": "d 100 100000",
+    "name": "Evaluation time"
+  },
+  {
+    "id": "restart",
+    "_classname": "property",
+    "help": "Re-evaluate all genotypes in the current generation",
+    "type": "p",
+    "name": "Restart epoch"
+  },
+  {
+    "id": "creath",
+    "_classname": "property",
+    "help": "Vertical position (above the surface) where newborn creatures are placed.\nNegative values are only used in the water area:\n  0   = at the surface\n-0.5 = half depth\n-1   = just above the bottom",
+    "type": "f -1 50",
+    "name": "Initial elevation"
+  },
+  {
+    "id": "notes",
+    "_classname": "state",
+    "help": "You can write anything here\n(it will be saved to the experiment file)\n",
+    "type": "s 1",
+    "name": "Notes"
+  },
+  {
+    "id": "epoch",
+    "_classname": "state",
+    "flags": 16,
+    "type": "d",
+    "name": "Generation number"
+  },
+  {
+    "id": "current",
+    "_classname": "state",
+    "flags": 16,
+    "type": "d",
+    "name": "Evaluating genotype"
+  }
+]

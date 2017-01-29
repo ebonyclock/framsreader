@@ -1,0 +1,20 @@
+[
+  {
+    "genotype": "X[*]X[|][G]X[@][N](X[T],X[S])",
+    "user1": "null",
+    "vertvel": 0,
+    "_classname": "org",
+    "velocity": 0,
+    "info": "used to generate neurons.pov",
+    "popsiz": 0,
+    "num": 1,
+    "uid": "g1",
+    "vertpos": 0,
+    "lifespan": 0,
+    "name": "neurons",
+    "user2": "null",
+    "gnum": 0,
+    "user3": "null",
+    "distance": 0
+  }
+]

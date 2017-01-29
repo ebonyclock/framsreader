@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Calculate symmetry",
+    "_classname": "script",
+    "code": "function main()\n{\n  Simulator.print(\"Calculating symmetry...\");\n\n  if (GenePools[0].size == 0)\n  {  \n    Simulator.message(\"This script needs some genotypes.\", 2);\n    return ;\n  }\n\n  for (var pool in GenePools)\n  {\n    for (var g in pool)\n    {\n      var m = Model.newFromGeno(g.geno);\n      //Simulator.message(\"...Calculating symmetry of \"+g.name,0);\n      var s = ModelSymmetry.calculateSymmetry(m); //default parameters\n      Simulator.message(\"Symmetry of '\"+g.name+\"' is \"+s+\", plane: [\"+\n        ModelSymmetry.symResultA+\", \"+ModelSymmetry.symResultB+\", \"+ModelSymmetry.symResultC+\"], \"+ModelSymmetry.symResultD \n        ,0);\n    }\n  }\n}\n\n/*\nfitness function that is a symmetry of a genotype for a given plane:\nvar m=Model.newFromGeno(this.geno);\nreturn ModelSymmetry.calculateSymmetryForPlane(m,-0.305212, -0.939347, -0.156434, 0.0798513);\n*/\n",
+    "help": "Calculate symmetry value and symmetry plane for all genotypes\n(note: may take a long time for complex bodies).\nDetails of this method are described in http://www.framsticks.com/node/808"
+  }
+]

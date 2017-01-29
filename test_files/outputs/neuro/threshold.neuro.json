@@ -1,0 +1,30 @@
+[
+  {
+    "prefinputs": -1,
+    "description": "if (input>=t) then output=hi else output=lo",
+    "name": "Thr",
+    "_classname": "class",
+    "prefoutput": 1,
+    "code": "function init()\n{}\n\nfunction go()\n{\n  if (Neuro.weightedInputSum >= NeuroProperties.t)\n    Neuro.state = NeuroProperties.hi;\n  else\n    Neuro.state = NeuroProperties.lo;\n}\n",
+    "icon": "24,3,3,25,0,25,100,75,50,25,0,1,75,50,100,50,3,30,75,40,75,40,40,60,40",
+    "longname": "Threshold"
+  },
+  {
+    "id": "t",
+    "_classname": "property",
+    "type": "f",
+    "name": "Threshold"
+  },
+  {
+    "id": "lo",
+    "_classname": "property",
+    "type": "f",
+    "name": "Low output value"
+  },
+  {
+    "id": "hi",
+    "_classname": "property",
+    "type": "f",
+    "name": "High output value"
+  }
+]

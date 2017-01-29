@@ -1,0 +1,18 @@
+[
+  {
+    "prefinputs": -1,
+    "vhints": 16,
+    "name": "Light",
+    "_classname": "class",
+    "prefoutput": 0,
+    "code": "\nfunction init()\n{\n  Neuro.signals.add(\"light\");\n  Neuro.signals[0].flavor=NeuroProperties.flavor;\n  Neuro.signals[0].power=0;\n}\n\nfunction go()\n{\n  Neuro.state=Neuro.weightedInputSum;\n  var p=Neuro.state;\n  if (p>=1.0) p=1.0;\n  Neuro.signals[0].power=5.0*p;\n}\n",
+    "icon": "57,8,9,10,50,30,50,35,35,50,30,65,35,70,50,65,65,50,70,35,65,30,50,1,30,30,20,20,1,50,25,50,10,1,70,30,80,20,1,75,50,90,50,1,70,70,80,80,1,50,75,50,90,1,30,70,20,80",
+    "preflocation": 1,
+    "longname": "Light"
+  },
+  {
+    "id": "flavor",
+    "_classname": "property",
+    "type": "f 0 4 0"
+  }
+]

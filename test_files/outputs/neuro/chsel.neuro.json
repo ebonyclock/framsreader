@@ -1,0 +1,18 @@
+[
+  {
+    "prefinputs": 1,
+    "description": "Sample custom neuron class. This one works just like the \"ChSel\" neuron.",
+    "name": "ChSel_Test",
+    "_classname": "class",
+    "prefoutput": 1,
+    "code": "function init()\n{}\n\nfunction go()\n{\n  Neuro.state = Neuro.getWeightedInputStateChannel(0, NeuroProperties.ch);\n}\n",
+    "icon": "41,6,4,25,0,25,100,75,70,75,30,25,0,1,75,50,100,50,1,70,50,55,50,3,50,55,55,50,50,45,50,55,1,30,50,50,50,1,35,53,39,47",
+    "longname": "Channel select"
+  },
+  {
+    "id": "ch",
+    "_classname": "property",
+    "type": "d",
+    "name": "channel"
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "name": "Dance",
+    "_classname": "show",
+    "info": "Dance",
+    "expdef": "dance",
+    "code": "\nglobal g_lasttime; //for auto popsize\n\nfunction onLoad()\n{\n  ShowManager.info = Simulator.expdef_info;\n  TrackingCam.cam_chspeed = 0.1;\n  TrackingCam.cam_zoom = 1.2;\n  \n  GLDisplay.desiredsimspeed=30;\n  g_lasttime=Math.time;\n  ShowProperties.dancers=0;\n  ShowProperties_dancers_set();\n}\n\n\nfunction onShowStep()\n{\n  TrackingCam.setViewDir(Math.sin(0.1 * Math.time) * 40, 20.0 + Math.sin(0.07 * Math.time) * 15);\n  if (ShowProperties.dancers == 0)\n    autoPopsize();\n}\n\nfunction autoPopsize()\n{\n  if (Math.time - g_lasttime > 5.0)\n  {\n    //Simulator.print(\"\"+GLDisplay.desiredsimspeed+\" \"+Simulator.simspeed+\" \"+GLDisplay.fps+\" fps\");\n    g_lasttime = Math.time;\n    if ((GLDisplay.fps < (0.85*GLDisplay.maxfps)) && ExpProperties.MaxCreated > 2)\n    {\n      ExpProperties.MaxCreated--;\n      setArrangeRequest(Simulator.stepNumber + 20);\n      //Simulator.print(\"-- (\"+ExpProperties.MaxCreated+\")\");\n    }\n    if (GLDisplay.fps > (0.95*GLDisplay.maxfps))\n    {\n      ExpProperties.MaxCreated++;\n      setArrangeRequest(Simulator.stepNumber + 20);\n      //Simulator.print(\"++ (\"+ExpProperties.MaxCreated+\")\");\n    }\n  }\n}\n\n\nfunction ShowProperties_restart_land_call()\n{\n  ExpProperties_restart_land_call();\n}\n\nfunction ShowProperties_restart_water_call()\n{\n  ExpProperties_restart_water_call();\n}\n\nfunction ShowProperties_arrangement_call()\n{\n  ExpProperties_arrangement_call();\n}\n\nfunction ShowProperties_dancers_set()\n{\n  ExpProperties.MaxCreated = [9, 2, 3, 4, 9, 16][ShowProperties.dancers];\n  setArrangeRequest(Simulator.stepNumber + 20);\n}\n\nfunction ShowProperties_tempo_set()\n{\n  ExpProperties.tempo=ShowProperties.tempo;\n}\n\nfunction ShowProperties_sound_set()\n{\n  ExpProperties.sound=ShowProperties.sound;\n}\n"
+  },
+  {
+    "id": "restart_land",
+    "_classname": "property",
+    "type": "p",
+    "name": "Land dance"
+  },
+  {
+    "id": "restart_water",
+    "_classname": "property",
+    "type": "p",
+    "name": "Water dance"
+  },
+  {
+    "id": "dancers",
+    "_classname": "property",
+    "help": "\"Auto\" adjusts the number of dancers to the speed of your computer.",
+    "type": "d 0 5 ~Auto~2~3~4~9~16",
+    "name": "Number of dancers"
+  },
+  {
+    "id": "tempo",
+    "_classname": "property",
+    "type": "d 0 2 ~Slow~Medium~Fast",
+    "name": "Dance tempo"
+  },
+  {
+    "id": "arrangement",
+    "_classname": "property",
+    "type": "p",
+    "name": "Change arrangement"
+  },
+  {
+    "id": "sound",
+    "_classname": "property",
+    "type": "d 0 1 1",
+    "name": "Beat"
+  }
+]

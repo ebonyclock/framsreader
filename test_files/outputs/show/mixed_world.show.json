@@ -1,0 +1,15 @@
+[
+  {
+    "name": "Mixed world demo",
+    "_classname": "show",
+    "info": "No evolution, creatures are just simulated in a mixed land-and-water environment.\n",
+    "expdef": "standard",
+    "code": "\nfunction onLoad()\n{\n  Math.seed = Math.time;\n  Simulator.import(\"f-x.sim\");\n  Simulator.import(\"show_noevol.sim\");\n  ExpProperties.selrule = 0; // random selection\n  World.wrldsiz = 40;\n  Simulator.import(\"walking.gen\");\n  Simulator.import(\"swimming.gen\");\n  ShowProperties_water_set();\n  GLDisplay.desiredsimspeed = 50;\n}\n\nfunction ShowProperties_water_set()\n{\n  World.wrldwat = [ -1.5, 0.5, 8.5][ShowProperties.water];\n}\n\n"
+  },
+  {
+    "id": "water",
+    "_classname": "property",
+    "type": "d 0 2 1 ~Low~Medium~High",
+    "name": "Water level"
+  }
+]

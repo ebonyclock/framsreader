@@ -1,0 +1,63 @@
+show:
+name:Open external file
+expdef:standard
+code:~
+@include "AL-shared.inc"
+
+function onLoad()
+{
+GLDisplay.simsteps = 0;
+GLDisplay.user_interaction=0;
+GLDisplay.world_visibility=1;
+ShowManager.dispinfo=0;
+
+Simulator.import(ShowManager.openfilename,2);
+
+if ((GenePools[0].size>0) && GenePools[0][0].is_valid)
+  {
+  var lab=GUI.newLabel("","Importing a genotype");
+  lab.setAutolayout(0,0,0,0, 0.1,0.05,0.8,0.5);
+  lab.align=0; lab.valign=-1;
+  var viewer=GUI.newModel("",GenePools[0][0].genotype);
+  viewer.setAutolayout(0,0,0,0, 0.1,0.1,0.8,0.8);
+  var b=GUI.newButton("ok","Accept");
+  b.setAutolayout(0,0,0,0, 0.55,0.8,0.35,0.15);
+  b.bgcolor=0xff66cc66; b.fgcolor=0xffffffff;
+  b=GUI.newButton("cancel","Cancel");
+  b.setAutolayout(0,0,0,0, 0.1,0.8,0.35,0.15);
+  }
+else
+  {
+  var lab=GUI.newLabel("","Invalid file");
+  lab.setAutolayout(0,0,0,0, 0.1,0.1,0.8,0.8);
+  lab.align=0; lab.valign=0;
+  var b=GUI.newButton("cancel","Back");
+  b.setAutolayout(0,0,0,0, 0.3,0.8,0.4,0.15);
+  }
+
+}
+
+function onGUIEvent(elem,arg)
+{
+switch(elem.name)
+  {
+  case "ok":
+      {
+      var saved=GenePools[0][0];
+      setInitialDataDictionary(saved);
+      saved.data->imported=1;
+      saved.data->time = Math.time;
+      GenePools[0].clear();
+      saved.moveTo(GenePools[0]);
+      saveCurrent();
+      ShowManager.show="AL-eval";
+      }
+      break;
+
+  case "cancel":
+      ShowManager.show=ShowManager.prev_show;
+      if (ShowManager.show=="AL-openfile")
+        ShowManager.show="AL-history";
+      break;
+  }
+}

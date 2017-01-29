@@ -1,0 +1,21 @@
+[
+  {
+    "name": "Text writer",
+    "_classname": "show",
+    "info": "Some creatures look just like letters...",
+    "expdef": "text_writer",
+    "code": "\nfunction onLoad()\n{\n  ExpProperties.collisions = 0;\n  ShowProperties.font = 0;\n  ShowProperties.text = 1;\n  ShowProperties_text_set();\n  TrackingCam.setViewDir(270, 30);\n  GLDisplay.desiredsimspeed = 30;\n}\n\nfunction ShowProperties_font_set()\n{\n  ShowProperties_text_set();\n}\n\nfunction ShowProperties_text_set()\n{\n  var f;\n  if (ShowProperties.font == 0)\n    f = \"<f0>\";\n  else\n    f = \"<f1>\";\n  if (ShowProperties.text == 0)\n  {\n    World.wrldsiz = 30;\n    ExpProperties.text = f + \"<h1>\\n<vs1.3>\\n<center>STAR WARS\\n<left>\\n\";\n    ExpProperties.text += \"<justify>A LONG TIME AGO IN A GALAXY FAR FAR AWAY A BATTLE RAGED\\n<left>\\n\";\n    ExpProperties.text += \"<justify>FOR EONS A FIERCE STRUGGLE HAD RAVAGED PLUMONIA\\nAND WITHOUT INTERVENTION NO ONE WOULD LIVE TO SEE THE END\\n<left>\\n\";\n    ExpProperties.text += \"<justify>THE INHABITANTS OF PLUMONIA WERE CREATURES OF VIRTUE AND PEACE\\n<left>\\n\";\n    ExpProperties.text += \"<center>HOWEVER THERE WERE THOSE WHO HELD NOT THE HIGH REGARD FOR EQUALITY AND HONOR\\n<left>\\n\";\n  }\n  else\n  {\n    World.wrldsiz = 50;\n    ExpProperties.text = f + \"<h1>\\n<vs1.3>\\n<center>ABOUT FRAMSTICKS\\n<left>\\n\";\n    ExpProperties.text += \"<justify>THE FRAMSTICKS PROJECT WAS STARTED IN LATE 1996 BY MACIEJ KOMOSINSKI AND SZYMON ULATOWSKI\\n\";\n    ExpProperties.text += \"<left>\\n\";\n    ExpProperties.text += \"<justify>IT IS A THREE DIMENSIONAL LIFE SIMULATION WITH BOTH MECHANICAL STRUCTURES AND CONTROL SYSTEMS MODELED\\n\";\n    ExpProperties.text += \"<left>\\n\";\n    ExpProperties.text += \"<justify>VARIOUS KINDS OF EXPERIMENTS CAN BE DESIGNED INCLUDING\\n\";\n    ExpProperties.text += \"<center>SIMPLE OPTIMIZATION BY EVOLUTIONARY ALGORITHMS\\n\";\n    ExpProperties.text += \"<center>COEVOLUTION\\n\";\n    ExpProperties.text += \"<center>OPEN ENDED AND SPONTANEOUS EVOLUTION\\n\";\n    ExpProperties.text += \"<center>DISTINCT GENE POOLS AND POPULATIONS\\n\";\n    ExpProperties.text += \"<center>DIVERSE GENOTYPE TO PHENOTYPE MAPPINGS\\n\";\n    ExpProperties.text += \"<center>AND SPECIES AND ECOSYSTEMS MODELING\\n\";\n    ExpProperties.text += \"<left>\\n\";\n    ExpProperties.text += \"<hs1.5><justify>CURRENT FRAMSTICKS USERS WORK ON\\n\";\n    ExpProperties.text += \"<center>EVOLUTIONARY COMPUTATION\\n\";\n    ExpProperties.text += \"<center>ARTIFICIAL INTELLIGENCE\\n\";\n    ExpProperties.text += \"<center>NEURAL NETWORKS\\n\";\n    ExpProperties.text += \"<center>BIOLOGY\\n\";\n    ExpProperties.text += \"<center>ROBOTICS AND SIMULATION\\n\";\n    ExpProperties.text += \"<center>COGNITIVE SCIENCE\\n\";\n    ExpProperties.text += \"<center>NEUROSCIENCE\\n\";\n    ExpProperties.text += \"<center>MEDICINE\\n\";\n    ExpProperties.text += \"<center>PHILOSOPHY\\n\";\n    ExpProperties.text += \"<center>VIRTUAL REALITY\\n\";\n    ExpProperties.text += \"<center>GRAPHICS AND ART\\n\";\n    ExpProperties.text += \"<left>\\n\";\n    ExpProperties.text += \"<hs2><center>FRAMSTICKS MEANS\\n\";\n    ExpProperties.text += \"<left>RESEARCH\\n\";\n    ExpProperties.text += \"<center>EDUCATION\\n\";\n    ExpProperties.text += \"<right>ENTERTAINMENT\\n\";\n  }\n  Simulator.init();\n}\n\n"
+  },
+  {
+    "id": "font",
+    "_classname": "property",
+    "type": "d 0 1 ~Accurate~Irregular",
+    "name": "Font"
+  },
+  {
+    "id": "text",
+    "_classname": "property",
+    "type": "d 0 1 ~\"Star Wars\"~\"About Framsticks\"",
+    "name": "Text to write"
+  }
+]

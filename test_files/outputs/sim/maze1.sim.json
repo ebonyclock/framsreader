@@ -1,0 +1,21 @@
+[
+  {
+    "wrldbnd": 1,
+    "startxlist": "1,1,8,8",
+    "wrldtyp": 1,
+    "wrldsiz": 80,
+    "_classname": "sim_params",
+    "startheadings": "0,270,180,90",
+    "targetxlist": "8,8,1,1",
+    "wrldwat": -1,
+    "targetylist": "8,1,1,8",
+    "wrldmap": "m 10 10\n8 8 8 8 8 8 8 8 8 8\n8 5 5 5 5 5 5 5 5 8\n8 5 8 8 8 8 8 8 5 8\n8 5 8 8 8 8 8 8 5 8\n8 5 8 8 8 8 8 8 5 8\n8 5 8 8 8 8 8 8 5 8\n8 5 8 8 8 8 8 8 5 8\n8 5 8 8 8 8 8 8 5 8\n8 5 5 5 5 5 5 5 5 8\n8 8 8 8 8 8 8 8 8 8\n",
+    "expdef": "mazes",
+    "startylist": "1,8,8,1"
+  },
+  {
+    "name": "Genotypes",
+    "_classname": "GenePool",
+    "fitness": "return 0.0+float(this.user1)*1.0;"
+  }
+]

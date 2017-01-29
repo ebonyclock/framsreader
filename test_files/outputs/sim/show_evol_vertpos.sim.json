@@ -1,0 +1,13 @@
+[
+  {
+    "_classname": "sim_params"
+  },
+  {
+    "fitm": 2,
+    "name": "Genotypes",
+    "_classname": "GenePool",
+    "fitma": 2,
+    "fitfun": 0,
+    "fitness": "// Unfortunately, using true vertical position for optimization yields a very discouraging fitness landscape when\n// evolution starts from simplest genotypes (like \"X\"). This is because the more sticks are added, the\n// lower negative vertical position (a flat creature is pressed into the ground).\n// To speed up evolution at this initial stage, we slightly modify fitness for creatures that have vertical\n// position below 0. If they have few sticks, we encourage more sticks. If they have enough sticks, we encourage volume.\n\nif (this.vertpos<0) //completely flat, pressed into ground. Let's build a better fitness landscape.\n{\n  if (this.numjoints<5) return 0.00000001*this.numjoints; //encourage more sticks\n  else if (this.numjoints<10) //enough sticks (5..9) to expect some volume\n  {\n    var m=this.getModel();\n    return 0.0000001*Math.min(Math.min(m.size_x,m.size_y),m.size_z); //encourage more volume\n  }\n}\nreturn this.vertpos; //either has true positive vertpos or has negative but >=10 sticks, so doesn't need fake fitness\n"
+  }
+]

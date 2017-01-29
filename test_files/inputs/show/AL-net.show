@@ -1,0 +1,47 @@
+show:
+name:Online evolution
+expdef:standard
+code:~
+function onLoad()
+{
+	GLDisplay.user_interaction = 2;
+	GLDisplay.world_visibility = 1 + 4;
+	GLDisplay.back_action = "onBack";
+	ShowManager.dispinfo = 0;
+
+	var d = File.callURL("http://ec.framsticks.com/direct_submit/", null, null);
+	if (d->ok)
+	{
+		//Simulator.print("content: "+d->content);
+		d = String.deserialize(d->content);
+		if (typeof(d) == "Error")
+		{
+			Simulator.print("Cannot parse json: " + d);
+		}
+		else
+		{
+			var li = GUI.newList("pools");
+			li.align = 1;
+			li.valign = 0;
+			li.setAutolayout(0, 0, 0, 0, 0.1, 0.1, 0.8, 0.8);
+			li.rowheight = (GLDisplay.size_x + GLDisplay.size_y) / 15;
+
+			for (var row in d->data)
+			{
+				//Simulator.print(row);
+				li.addItem("Environment and fitness: " + row->env_name + "\nGene pool: " + row->pool_name, "menu_show_mixed_world");
+			}
+		}
+	}
+}
+
+function onGUIEvent(elem, arg)
+{
+}
+
+function onBack()
+{
+	ShowManager.show = "AL-top";
+}
+
+~

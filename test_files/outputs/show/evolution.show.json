@@ -1,0 +1,39 @@
+[
+  {
+    "name": "Evolutionary optimization",
+    "_classname": "show",
+    "info": "Evolutionary optimization with user-selected criteria.\n50 genotypes in the gene pool, tournament selection.\n",
+    "expdef": "standard",
+    "code": "\nglobal g_step;\nglobal g_crcharts, g_simcharts;\nglobal g_win1, g_win2;\nglobal g_critIds, g_critIds2, g_dispNames, g_critNames, g_critFiles;\nglobal g_next_hidden_check, g_originaldesiredsimspeed;\nglobal g_visibletime, g_hiddentime;\n\nconst BACKGROUNDSPEED = 99999; //set for \"background simulation\" mode\n\nfunction onLoad()\n{\n  g_step = 1;\n  TrackingCam.cam_chspeed = 0.1;\n  ShowProperties.criterion = 0;\n  ShowProperties.hiddencalc = 2;\n  ShowProperties.convergence = 0;\n  g_next_hidden_check = 0;\n  g_visibletime = [18, 10, 3];\n  g_hiddentime = [2, 10, 27];\n  GLDisplay.desiredsimspeed = 50;\n  g_originaldesiredsimspeed = GLDisplay.desiredsimspeed; //to be able to restore original value\n\n  g_dispNames = [\"Velocity\", \"Vertical velocity\", \"Height\"];\n  g_critNames = [\"Velocity\", \"Vertical velocity\", \"Vertical position\"];\n  g_critFiles = [\"vel\", \"vertvel\", \"vertpos\"];\n  g_critIds = [\"c_velocity\", \"c_vertvelocity\", \"c_vertpos\"];\n  g_critIds2 = [\"velocity\", \"vertvel\", \"vertpos\"];\n\n  g_crcharts = GLDisplay.newCreatureCharts();\n  g_simcharts = GLDisplay.newSimStatsCharts();\n\n  updateBanner();\n  loadEvolParams();\n  createWindows();\n  ShowProperties_convergence_set();\n  //ShowProperties_restartempty_call();\n  ShowProperties_restartsimple_call();\n}\n\nfunction loadEvolParams()\n{\n  var filename = \"show_evol_\" + g_critFiles[ShowProperties.criterion] + \".sim\";\n  Simulator.print(\"Loading simulator parameters from \" + filename);\n  Simulator.import(\"show_evol.sim\");\n  Simulator.import(filename);\n}\n\nfunction createWindows()\n{\n  var IF, i, c = ShowProperties.criterion;\n\n  // window with creature performane chart\n  IF = Interface.makeFrom(Creature.*);\n  i = IF.findId(g_critIds[c]);\n  if (i < 0)\n    Simulator.message(\"creature property not found!\", 1);\n  else\n    g_win1 = g_crcharts.add(i);\n  //Simulator.print(\"crcharts created:\"+win);\n  //Simulator.print(\"client=\" + g_win1.client);\n  g_win1.client.xscale = 20;\n  g_win1.backcolor = 0x80ffdddd;\n  g_win1.style = 1 + 2 + 4 + 16;\n  g_win1.title = \"Current creature\";\n  g_win1.size_x = GLDisplay.size_x / 4;\n  g_win1.size_y = GLDisplay.size_y / 3;\n  //Simulator.print(\"disp size \" + GLDisplay.size_x + \" x \" + GLDisplay.size_y);\n\n  // window with simulator statistics chart\n  IF = Interface.makeFrom(stats.*);\n  var t = \"Genotypes: \" + g_critNames[c];\n  Simulator.print(t);\n  i = IF.findIdInGroup(\"st_avg_\" + g_critIds2[c], t);\n  //i=IF.findIdInGroup(\"st_avg_velocity\",\"Genotypes: Velocity\");\n  Simulator.print(\"st_avg_\" + g_critIds[c]);\n  if (i < 0)\n    Simulator.message(\"simulator stats entry not found!\", 1);\n  else\n    g_win2 = g_simcharts.add(i);\n  g_win2.style = 1 + 2 + 4 + 16;\n  g_win2.backcolor = 0x80ddddff;\n  g_win2.title = \"Gene pool average\";\n  g_win2.size_x = GLDisplay.size_x / 4;\n  g_win2.size_y = GLDisplay.size_y / 3;\n}\n\nfunction updateBanner()\n{\n  var t = \"\";\n  if (GLDisplay.desiredsimspeed == BACKGROUNDSPEED)\n    t += \"[Background simulation]\\n\\n\";\n  t += \"Current criterion: \" + g_dispNames[ShowProperties.criterion];\n  if (CreatureSelection.count > 0)\n  {\n    var c = CreatureSelection.get(0);\n    t += \"\\nCurrent creature: \" + c.name + \"\\n\" + c.info + \"\\n\";\n    t += \"\\nGenotype: \" + c.genotype + \"\\n\";\n    g_crcharts.creature = c;\n  }\n  GLDisplay.banner = t;\n}\n\nfunction onResize()\n{\n  g_win1.size_x = GLDisplay.size_x / 4;\n  g_win1.size_y = GLDisplay.size_y / 3;\n  g_win2.size_x = GLDisplay.size_x / 4;\n  g_win2.size_y = GLDisplay.size_y / 3;\n  g_win2.pos_x = GLDisplay.size_x - g_win2.size_x;\n  g_win2.pos_y = GLDisplay.size_y - g_win2.size_y - 18;\n  g_win1.pos_y = GLDisplay.size_y - g_win1.size_y - 18;\n  g_win1.pos_x = 0;\n}\n\nfunction onShowStep()\n{\n  TrackingCam.cam_dir += 0.01;\n  g_step++;\n  if (g_step > 100)\n  {\n    g_step = 1;\n    if (CreatureSelection.count == 0)\n      if (GLDisplay.simsteps < 100)\n      {\n        var g = Populations[0];\n        if (g.size > 0)\n        {\n          CreatureSelection.clear();\n          CreatureSelection.add(g[0]);\n        }\n      }\n  }\n  if (Math.time > g_next_hidden_check)\n    if (GLDisplay.desiredsimspeed == BACKGROUNDSPEED) // was \"hidden\"\n    { \n      GLDisplay.desiredsimspeed = g_originaldesiredsimspeed;\n      if (ShowProperties.hiddencalc > 0)\n        g_next_hidden_check = Math.time + g_visibletime[ShowProperties.hiddencalc - 1];\n      updateBanner();\n    }\n    else\n    {\n      if (ShowProperties.hiddencalc > 0) //becomes \"hidden\"\n      {\n        g_next_hidden_check = Math.time + g_hiddentime[ShowProperties.hiddencalc - 1];\n        GLDisplay.desiredsimspeed = BACKGROUNDSPEED;\n        updateBanner();\n      }\n    }\n}\n\nfunction onSelectionChange()\n{\n  updateBanner();\n}\n\nfunction deleteWindows()\n{\n  g_crcharts.removeAll();\n  g_simcharts.removeAll();\n}\n\nfunction ShowProperties_criterion_set()\n{\n  Simulator.print(\"changing criterion to \" + g_dispNames[ShowProperties.criterion]);\n  loadEvolParams();\n  ExpProperties.cleardata();\n  deleteWindows();\n  createWindows();\n  onResize();\n  updateBanner();\n}\n\nfunction ShowProperties_convergence_set()\n{\n  if (ShowProperties.convergence == 0)\n    ExpProperties.delrule = 0; //random deletion\n  else\n    ExpProperties.delrule = 1; //inv-fitness\n  if (ExpProperties.delrule == 0)\n    Simulator.print(\"Genotype deletion: random\");\n  if (ExpProperties.delrule == 1)\n    Simulator.print(\"Genotype deletion: inversely proportional to fitness\");\n}\n\nfunction ShowProperties_restartempty_call()\n{\n  Simulator.print(\"Restarting with predefined simple genotypes\");\n  Populations[0].clear();\n  Populations[1].clear();\n  GenePools[0].clear();\n  GenePools[0].add(\"X\").name=\"Initial\";\n  deleteWindows();\n  createWindows();\n  onResize();\n}\n\nfunction ShowProperties_restartsimple_call()\n{\n  Simulator.print(\"Restarting with single X genotype\");\n  Populations[0].clear();\n  Populations[1].clear();\n  GenePools[0].clear();\n  Simulator.import(\"show_evol_simple.gen\");\n  deleteWindows();\n  createWindows();\n  onResize();\n}\n\n"
+  },
+  {
+    "id": "criterion",
+    "_classname": "property",
+    "type": "d 0 2 ~Velocity~Vertical velocity~Height",
+    "name": "Optimization criterion"
+  },
+  {
+    "id": "hiddencalc",
+    "_classname": "property",
+    "type": "d 0 3 ~Never~10%~50%~90%",
+    "name": "Background simulation time"
+  },
+  {
+    "id": "convergence",
+    "_classname": "property",
+    "type": "d 0 1",
+    "name": "Fast convergence (remove unfit)"
+  },
+  {
+    "id": "restartempty",
+    "_classname": "property",
+    "type": "p",
+    "name": "Restart evolution (empty gene pool)"
+  },
+  {
+    "id": "restartsimple",
+    "_classname": "property",
+    "type": "p",
+    "name": "Restart evolution (simple genotypes)"
+  }
+]

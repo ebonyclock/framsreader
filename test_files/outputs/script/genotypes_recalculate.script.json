@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Recalcuate genotype properties",
+    "_classname": "script",
+    "code": "function main()\n{\n\tfor(var pool in GenePools)\n\t\tfor(var g in pool)\n\t\t{\n\t\t\tvar genes = g.genotype;\n\t\t\tg.genotype = \"\"; //set empty and then restore the original...\n\t\t\tg.genotype = genes; //...this triggers recalculation.\n\t\t}\n}\n",
+    "help": "Recalculates validity and the number of parts/joints/neurons/connections for all genotypes.\nThis may be useful when you suspect an old .gen file when the interpretation of the genes changed,\nor when you do not trust the information provided along with the genotype."
+  }
+]

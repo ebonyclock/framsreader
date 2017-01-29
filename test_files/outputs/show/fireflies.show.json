@@ -1,0 +1,33 @@
+[
+  {
+    "name": "Fireflies",
+    "_classname": "show",
+    "info": "Inter-creature communication.\nFireflies use photoreceptors to synchronize flashing with others.\n",
+    "expdef": "standard",
+    "code": "\nglobal g_nextaddrem;\nglobal g_neuro, g_neurowin;\nglobal g_mincreatures,g_maxcreatures;\n\nfunction onLoad()\n{\n  Math.seed = Math.time;\n  World.wrldsiz = 40;\n  var pop=Populations[0];\n  pop.nnsim = 1;\n  pop.death = 0;\n  pop.energy = 0;\n  ExpProperties.MaxCreated = 0;\n  ExpProperties.placement = 0;\n  ExpProperties.rotation = 4;\n  ExpProperties.creath = 5;\n  GLDisplay.desiredsimspeed = 150;\n  g_nextaddrem=0;\n  GLDisplay.banner = \"Double click a creature to see its neural network.\";\n  restartShow();\n}\n\nfunction restartShow()\n{\nSignalView.clear();\nSignalView.mode = 1;\nif (ShowProperties.colors)\n\t{\n\tg_mincreatures=4;\n\tg_maxcreatures=20;\n\tSignalView.addSignalsFilter(\"light\", 0x800000ff, 0,0,0, 0, 2);\n\tSignalView.addSignalsFilter(\"light\", 0x8000ff00, 0,0,0, 2, 2);\n\tSignalView.addSignalsFilter(\"light\", 0x80ff0000, 0,0,0, 4, 2);\n\t}\nelse\n\t{\n\tg_mincreatures=2;\n\tg_maxcreatures=10;\n\tSignalView.addSignals(\"light\", 0xffffffff, 0, 0, 0);\n\t}\nvar i;\nfor(i=0;i<g_mincreatures;i++)\n\taddCreature();\n}\n\nfunction onShowStep()\n{\nif (Math.time > g_nextaddrem)\n\t{\n\tg_nextaddrem=Math.time+10+(10.0*Math.rnd01);\n\tif (ShowProperties.autoaddremove)\n\t\t{\n\t\tvar pop=Populations[0];\n\t\tif (((Math.rnd01>0.5)||(pop.size<=g_mincreatures))&&(pop.size<g_maxcreatures))\n\t\t\t{\n\t\t\taddCreature();\n\t\t\t}\n\t\telse\n\t\t\t{\n\t\t\tShowProperties_remove_call();\n\t\t\t}\n\t\t}\n\t}\n}\n\nfunction ShowProperties_add_call()\n{\n  addCreature();\n}\n\nfunction ShowProperties_remove_call()\n{\n  var pop=Populations[0];\n  if (pop.size > 0)\n     pop.delete(0);\n}\n\nfunction ShowProperties_colors_set()\n{\nPopulations[0].clear();\nrestartShow();\n}\n\nfunction addCreature()\n{\nvar flavor=0;\nif (ShowProperties.colors) flavor=Math.rnd01*4;\n  Populations[0].add(\"X[SeeLight,flavor:\"+flavor+\"][*][-1:2.26,6:-2,in:0.01,fo:0.01,si:1][*][-2:1,-1:-0.5,si:9999,fo:1,in:0][*][-2:2,-6:0.3,-1:-0.4,in:0.01,fo:0.01,si:1][*][-2:1,-1:-0.5,si:9999,fo:1,in:0][Light,-1:-1,flavor:\"+flavor+\"]\");\n}\n\nfunction onMouseClick(options, xy, point, vector)\n{\n// 1025 = 1 (LeftClick) + 1024 (DoubleClick)\n  if (options == 1025)\n  {\nvar cr=Populations.findCreatureAt(point,vector);\nif (cr!=null)\n\tshowNN(cr);\nelse\n\thideNN();\t\nGLDisplay.banner = \"\";\nreturn 1;\n  }\n  return 0;\n}\n\nfunction showNN(c)\n{\n  hideNN();\n  g_neuro = NeuroDiagram.new();\n  g_neurowin = GLDisplay.createWindow(1 + 2 + 4 + 16, \"Neurons\", g_neuro);\n  g_neurowin.backcolor = 0x80ffdddd;\n  g_neurowin.size_x = (2*GLDisplay.size_x) / 3;\n  g_neurowin.size_y = GLDisplay.size_y / 3;\n  g_neurowin.pos_x = 0;\n  g_neurowin.pos_y = GLDisplay.size_y - GLDisplay.size_y/3;\n  g_neuro.showCreature(c);\n}\n\nfunction hideNN()\n{\n  if (g_neurowin)\n    GLDisplay.deleteWindow(g_neurowin);\n  g_neurowin = null;\n  g_neuro = null;\n}\n\n\n"
+  },
+  {
+    "id": "colors",
+    "_classname": "property",
+    "type": "d 0 1",
+    "name": "Colors"
+  },
+  {
+    "id": "add",
+    "_classname": "property",
+    "type": "p",
+    "name": "Add a fly"
+  },
+  {
+    "id": "remove",
+    "_classname": "property",
+    "type": "p",
+    "name": "Remove a fly"
+  },
+  {
+    "id": "autoaddremove",
+    "_classname": "property",
+    "type": "d 0 1 1",
+    "name": "Automatic add/remove"
+  }
+]

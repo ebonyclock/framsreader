@@ -1,0 +1,19 @@
+[
+  {
+    "prefinputs": 0,
+    "description": "Returns the average signal intensity of all nearby transmitters. Unlike \"SeeLight\", signals do not attenuate over distance (however, the maximal signal distance is limited by the \"range\" parameter).",
+    "vhints": 32,
+    "name": "SeeLight2",
+    "_classname": "class",
+    "prefoutput": 1,
+    "code": "\nfunction go()\n{\n// unlike \"SeeLight\" which uses signals.receive() (returning the aggregated signal power),\n// this receptor calculates its output by analyzing individual signals, which results in \n// more flexibility but also some more work:\n  var received=Neuro.signals.receiveSet(\"light\",NeuroProperties.range);\n  if (received.size>0)\n  {\n    var i,sum=0.0;\n    for(i=0;i<received.size;i++)\n    {\n      // could also use other signal properties here\n      // to calculate something more sophisticated than just the average\n      sum+=received[i].power;\n    }\n    Neuro.state=sum/received.size;\n  }\n  else Neuro.state=0;\n}\n",
+    "icon": "34,3,7,100,50,90,50,90,40,70,40,80,50,70,60,90,60,90,50,4,10,10,50,30,30,40,55,53,47,53,1,55,53,50,46",
+    "preflocation": 1,
+    "longname": "Light receptor 2"
+  },
+  {
+    "id": "range",
+    "_classname": "property",
+    "type": "f 0 100 10"
+  }
+]

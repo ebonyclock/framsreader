@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Open external file",
+    "_classname": "show",
+    "expdef": "standard",
+    "code": "@include \"AL-shared.inc\"\n\nfunction onLoad()\n{\nGLDisplay.simsteps = 0;\nGLDisplay.user_interaction=0;\nGLDisplay.world_visibility=1;\nShowManager.dispinfo=0;\n\nSimulator.import(ShowManager.openfilename,2);\n\nif ((GenePools[0].size>0) && GenePools[0][0].is_valid)\n  {\n  var lab=GUI.newLabel(\"\",\"Importing a genotype\");\n  lab.setAutolayout(0,0,0,0, 0.1,0.05,0.8,0.5);\n  lab.align=0; lab.valign=-1;\n  var viewer=GUI.newModel(\"\",GenePools[0][0].genotype);\n  viewer.setAutolayout(0,0,0,0, 0.1,0.1,0.8,0.8);\n  var b=GUI.newButton(\"ok\",\"Accept\");\n  b.setAutolayout(0,0,0,0, 0.55,0.8,0.35,0.15);\n  b.bgcolor=0xff66cc66; b.fgcolor=0xffffffff;\n  b=GUI.newButton(\"cancel\",\"Cancel\");\n  b.setAutolayout(0,0,0,0, 0.1,0.8,0.35,0.15);\n  }\nelse\n  {\n  var lab=GUI.newLabel(\"\",\"Invalid file\");\n  lab.setAutolayout(0,0,0,0, 0.1,0.1,0.8,0.8);\n  lab.align=0; lab.valign=0;\n  var b=GUI.newButton(\"cancel\",\"Back\");\n  b.setAutolayout(0,0,0,0, 0.3,0.8,0.4,0.15);\n  }\n\n}\n\nfunction onGUIEvent(elem,arg)\n{\nswitch(elem.name)\n  {\n  case \"ok\":\n      {\n      var saved=GenePools[0][0];\n      setInitialDataDictionary(saved);\n      saved.data->imported=1;\n      saved.data->time = Math.time;\n      GenePools[0].clear();\n      saved.moveTo(GenePools[0]);\n      saveCurrent();\n      ShowManager.show=\"AL-eval\";\n      }\n      break;\n\n  case \"cancel\":\n      ShowManager.show=ShowManager.prev_show;\n      if (ShowManager.show==\"AL-openfile\")\n        ShowManager.show=\"AL-history\";\n      break;\n  }\n}\n\n"
+  }
+]

@@ -1,0 +1,135 @@
+show:
+name:Achievements
+expdef:standard
+code:~
+
+@include "AL-shared.inc"
+@include "AL-achievements.inc"
+
+function onBack()
+{
+if (closePopup()) return;
+ShowManager.show="AL-top";
+}
+
+function onLoad()
+{
+	GLDisplay.simsteps = 0;
+	GLDisplay.user_interaction=0;
+	GLDisplay.world_visibility=1;
+	GLDisplay.back_action="onBack";
+	ShowManager.dispinfo=0;
+	
+	loadHistory();
+	
+	var but; //TODO describe in help that "design a creature" means "engineer a genome" using genetic editor. 
+
+	initAchievementDefinitions();
+	var done=calcCompletedAchievements();
+	var progress=GUI.newGroup("");
+	progress.bgcolor=0x88000000;
+	progress.setAutolayout(0,0,0,0, 0.15,0.01,0.7,0.15);
+	var progress_fill=GUI.newGroup("");
+	progress_fill.setAutolayout(0,0,0,0, 0.01,0.05,float(done)/g_achievements.size*0.98,0.9);
+	progress_fill.bgcolor=0x6600ff00;
+        progress_fill.addTo(progress);
+	var lab=GUI.newLabel("","Completed "+done+" of "+g_achievements.size+" achievements");
+        lab.addTo(progress);
+	lab.setAutolayout(0,0,0,0, 0,0,1,1);
+	lab.align=0;
+
+	var li=GUI.newList("list");
+	li.font=2;
+	li.setAutolayout(0,0,0,0, 0.05,0.17,0.9,0.82); //the list takes 82% vertically
+	li.align=1;// list scrolls vertically
+	li.valign=0;// center list labels vertically
+
+	for(var achievement in g_achievements)
+	{
+		var s=describeAchievement(achievement);
+		var goodgenos=[];
+		for(var g in GenePools[0])
+		{
+			if (checkAchievement(achievement,g)==1)
+				goodgenos.add(g);
+		}
+		if (goodgenos.size>0)
+		{
+			s+="\nThis is fulfilled by "+goodgenos.size;
+			if (goodgenos.size==1) 
+				s+=" creature: "+goodgenos[0].name+".";
+			else
+				s+=" creatures, for example "+goodgenos[0].name+".";
+			li.addItem(s,"creature:"+goodgenos[0].genotype);
+		}
+		else
+		{
+			s+="\nGO FOR IT!";
+			li.addItem(s,"redclosex");
+		}
+	}
+}
+
+function layoutList()
+{
+	var li=GUI->list.rowheight=GUI.fontHeight(2)*5; //list items size depends on the default font height
+}
+
+function onResize()
+{
+	layoutList();
+}
+
+function unicodeRelationSymbol(rel)
+{
+	var SYMBOLS={"<":"<", ">":">", "=":"=", "<=":"≤", ">=":"≥"};
+	return SYMBOLS[rel];
+}
+
+function describeCriterion(crit,achievementvalue)
+{
+	var CRITERIA={
+		"format":"the genetic encoding",
+		"numparts":"the number of parts",
+		"numjoints":"the number of sticks",
+		"velocity":"the speed",
+		"water_velocity":"the speed in water",
+		"vertpos":"the height of the center"};
+	if (crit[0]=="format")
+		return CRITERIA[crit[0]]+" f"+achievementvalue;
+	else
+		return CRITERIA[crit[0]]+" "+unicodeRelationSymbol(crit[1])+" "+achievementvalue;
+}
+
+function describeOrigin(origin)
+{
+	var o="Design or evolve"; //default: origin not specified
+	if (origin=="D")
+		o="Design"; else
+	if (origin=="E")
+		o="Evolve";
+	return o+" a creature with ";
+}
+
+function describeAchievement(achievement)
+{
+	var s="";
+	var achievementcopy=achievement.clone(); //we need a copy because we have to put " and " only between the last pair of conditions, but we don't know how many conditions there are because...
+	achievementcopy.remove("origin="); //..."origin" influences the beginning of the sentence (not displayed as a condition) and it is optional in the achievement dictionary
+	for(var i=0;i<achievementcopy.size;i++)
+	{
+		var crit=getCriterionAndRelation(achievementcopy.getKey(i));
+		if (i>0)
+			if (i==achievementcopy.size-1) //last pair of conditions?
+				s+=" and ";
+			else
+				s+=", ";
+		s+=describeCriterion(crit,achievementcopy.get(i));
+	}
+	return describeOrigin(achievement["origin="])+s+".";
+}
+
+function onGUIEvent(elem,arg)
+{
+	if (handleHelp(elem)) return;
+}

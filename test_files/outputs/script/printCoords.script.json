@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Print creatures coordinates",
+    "_classname": "script",
+    "code": "function main()\n{\n  if (Populations[0].size <= 0)\n  {\n    Simulator.message(\"No creatures in group 0.\", 2);\n    return ;\n  }\n\n  var j;\n  for (var cr in Populations[0])\n  {\n    var parts=cr.numparts;\n    Simulator.print(cr.name + \" has \"+parts+\" Parts.\");\n    for (j = 0; j < parts; j++)\n      Simulator.print(\"  Part #\"+j+\" = [\"+cr.getMechPart(j).x+\", \"+cr.getMechPart(j).y+\", \"+cr.getMechPart(j).z+\"]\");\n  }\n}\n",
+    "help": "Print coordinates of Parts for all creatures from group #0."
+  }
+]

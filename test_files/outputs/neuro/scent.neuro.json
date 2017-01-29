@@ -1,0 +1,17 @@
+[
+  {
+    "prefinputs": 0,
+    "description": "Scents values of user fields in other creatures",
+    "name": "Scent",
+    "_classname": "class",
+    "prefoutput": 1,
+    "code": "\nfunction go()\n{\n  var scent;\n\n  if (NeuroProperties.x == 0)\n    scent = \"user1\";\n  else if (NeuroProperties.x == 1)\n    scent = \"user2\";\n  else if (NeuroProperties.x == 2)\n    scent = \"user3\";\n\n  Neuro.state = Populations.get(0).senseCreaturesProperty(\n                  Neuro.position_x, Neuro.position_y, Neuro.position_z, scent, Neuro.creature);\n\n  //Simulator.print(\"\"+Neuro.creature.name+\" ; Fx = \"+NeuroProperties.x);\n}\n",
+    "longname": "Scent user1/2/3 fields"
+  },
+  {
+    "id": "x",
+    "_classname": "property",
+    "type": "d 0 2",
+    "name": "user field #"
+  }
+]

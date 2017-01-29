@@ -1,0 +1,64 @@
+[
+  {
+    "prefinputs": 1,
+    "description": "PID Regulator (velocity/incremental form)",
+    "name": "PIDV",
+    "_classname": "class",
+    "prefoutput": 1,
+    "code": "//http://www.controlviews.com/articles/QandA/velocityfullvalue.html\n\nfunction init()\n{\n  NeuroProperties.e_0 = 0.0;\n  NeuroProperties.e_1 = 0.0;\n  NeuroProperties.e_2 = 0.0;\n  NeuroProperties.u_0 = 0.0;\n  NeuroProperties.u_1 = 0.0; \n}\n\nfunction go()\n{  \n  NeuroProperties.e_2 = NeuroProperties.e_1;\n  NeuroProperties.e_1 = NeuroProperties.e_0;\n  NeuroProperties.e_0 = Neuro.weightedInputSum; //Neuro.getInputState(0);\n\n  NeuroProperties.u_1 = NeuroProperties.u_0;\n  NeuroProperties.u_0 =  NeuroProperties.u_1 + NeuroProperties.k*(NeuroProperties.e_0-NeuroProperties.e_1) + \n                NeuroProperties.e_0*(NeuroProperties.k/NeuroProperties.ti) + \n                NeuroProperties.k*NeuroProperties.td*(NeuroProperties.e_0-(2*NeuroProperties.e_1)+NeuroProperties.e_2);\n  Neuro.state = NeuroProperties.u_0;\n}\n",
+    "longname": "PID Velocity [EXPERIMENTAL!]"
+  },
+  {
+    "id": "k",
+    "_classname": "property",
+    "type": "f 0.01 100.0",
+    "name": "K"
+  },
+  {
+    "id": "ti",
+    "_classname": "property",
+    "type": "f 0.01 100.0",
+    "name": "Ti"
+  },
+  {
+    "id": "td",
+    "_classname": "property",
+    "type": "f 0.01 100.0",
+    "name": "Td"
+  },
+  {
+    "id": "e_0",
+    "_classname": "property",
+    "flags": 32,
+    "type": "f",
+    "name": "E_0"
+  },
+  {
+    "id": "e_1",
+    "_classname": "property",
+    "flags": 32,
+    "type": "f",
+    "name": "E_1"
+  },
+  {
+    "id": "e_2",
+    "_classname": "property",
+    "flags": 32,
+    "type": "f",
+    "name": "E_2"
+  },
+  {
+    "id": "u_0",
+    "_classname": "property",
+    "flags": 32,
+    "type": "f",
+    "name": "U_0"
+  },
+  {
+    "id": "u_1",
+    "_classname": "property",
+    "flags": 32,
+    "type": "f",
+    "name": "U_1"
+  }
+]

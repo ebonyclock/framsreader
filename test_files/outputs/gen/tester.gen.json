@@ -1,0 +1,10 @@
+[
+  {
+    "genotype": "(rrAAAAAX(lllAAAX, X), rrX(X[@][T], FFFFFFX[G]), rrX(llllllllllXX[|]MMMMMMffffffX[|][S], SSSSSSX), rrIIIX(LIIIIX, IIIIX))",
+    "gnum": 0,
+    "name": "Tester",
+    "_classname": "org",
+    "info": "A testing creature for graphical styles. Includes a number of sensors and effectors, \nand various properties of joints, parts, and muscles. These properties can be\nvisualized graphically, as they are in \"standard\" Framsticks visual styles (OpenGL, POV-Ray).",
+    "num": 1
+  }
+]

@@ -1,0 +1,39 @@
+[
+  {
+    "name": "Benthic foraminifera",
+    "_classname": "show",
+    "info": "There are two species of Foraminiera: longitudal and coiled. The first chamber of the longitudal species has orange marks. Haploid and diploid generations alternate in both species. All chambers of the haploid generation have the same size. In the diploid generation, subsequent chambers are bigger than their predecessors. \n\nNutrients are shown as tiny green cylinders. Foraminifers move towards nearest nutrients and this way they can accumulate enough energy to reproduce.\n\nWhen the \"Enhance visualization\" option is enabled, reticulopodia are shown as large disks and positions of nutrients are indicated by cuboids.  \n\nMore information at www.framsticks.com/foraminifera\n",
+    "expdef": "foraminifera",
+    "code": "\nglobal Params; //to easily transfer changes in identical properties from this show to expdef\nglobal last_simspeed; //to display time scale when it changes significantly\n\nfunction onLoad()\n{\n\tvar nutrient_multiple = 200;\n\tParams = { \"foodflux\" : [0.0000000037815,0.0000000075631,0.000000015126], \"feedtrans\" : [0.0005,0.001,0.002],\"energy_nut\" :[nutrient_multiple*144.54,nutrient_multiple*544.54,nutrient_multiple*944.54], \"stress\" : [0,1], \"visualize\" : [0,1]};\n\tShowProperties.visualize=1;\n\tExpProperties.secPerStep=50;\n\tSimulator.init();\n\tlast_simspeed=0;\n\tGLDisplay.desiredsimspeed = 50;\n\tGLDisplay.minfps = 10;\n\tTrackingCam.cam_h = 15; //more side view\n\t\n\t//useful for screenshots:\n\t//GLDisplay.world_visibility=2+4; //show only environment and creatures (no background)\n\t//GLDisplay.bgcolor=0xffffffff; //white background\n}\n\nfunction timeScale()\n{\n\t//just a draft, this function and all constants in expdef need serious review\n\tvar localDriveMicronsPerStep=framsToMicrons(getMovePerStep());\n\tvar foramSpeedMmPerSec=ExpProperties.foramSpeedMmPerMin/60;\n\tvar localDriveMmPerStep=localDriveMicronsPerStep/1000;\n\tvar localDriveMmPerSec=localDriveMmPerStep*Simulator.simspeed;\n\treturn localDriveMmPerSec/foramSpeedMmPerSec;\n}\n\nfunction updateBanner()\n{\n\tGLDisplay.banner=\"World size is %g mm.\" % (framsToMicrons(World.wrldsiz)/1000);\n\tGLDisplay.banner+=\"\\nShowing real-time x %g.\" % timeScale();\n}\n\nfunction onShowStep()\n{\n\tif (Simulator.simspeed<last_simspeed*0.9 || Simulator.simspeed>last_simspeed*1.1) //significant change\n\t{\n\t\tupdateBanner();\n\t\tlast_simspeed=Simulator.simspeed;\n\t}\n}\n\nfunction setShowParam(param_id)\n{\n\tExpProperties.[param_id] = Params[param_id][ShowProperties.[param_id]];\n}\n\nfunction ShowProperties_foodflux_set()\n{\n\tsetShowParam(\"foodflux\");\n}\n\nfunction ShowProperties_feedtrans_set()\n{\n\tsetShowParam(\"feedtrans\");\n}\n\nfunction ShowProperties_energy_nut_set()\n{\n\tsetShowParam(\"energy_nut\");\n}\n\nfunction ShowProperties_stress_set()\n{\n\tsetShowParam(\"stress\");\n}\n\nfunction ShowProperties_visualize_set()\n{\n\tsetShowParam(\"visualize\");\n}\n\n"
+  },
+  {
+    "id": "foodflux",
+    "_classname": "property",
+    "type": "d 0 2 1 ~Low~Medium~High",
+    "name": "Food flux"
+  },
+  {
+    "id": "feedtrans",
+    "_classname": "property",
+    "type": "d 0 2 1 ~0.0001~0.001~0.01",
+    "name": "Energy transfer"
+  },
+  {
+    "id": "energy_nut",
+    "_classname": "property",
+    "type": "d 0 2 1 ~28908~108908~188908",
+    "name": "Nutrient energy"
+  },
+  {
+    "id": "stress",
+    "_classname": "property",
+    "type": "d 0 1 1",
+    "name": "Stress"
+  },
+  {
+    "id": "visualize",
+    "_classname": "property",
+    "type": "d 0 1 0",
+    "name": "Enhance visualization"
+  }
+]

@@ -1,0 +1,36 @@
+[
+  {
+    "name": "Learn where food is",
+    "_classname": "show",
+    "info": "Learn where food is, explore and exploit",
+    "expdef": "learn_food",
+    "code": "\nglobal g_step,g_chart,g_win;\n\nfunction onLoad()\n{\n  Simulator.init();\n  ShowProperties.shareknowledge=ExpProperties.shareknowledge;\n  ShowProperties.foodplacement=ExpProperties.foodplacement;\n  Math.seed = Math.time;\n  ShowManager.info = \"When a creature encounters food, it eats a bit of it and remembers its location. It also gets \\\"refreshed\\\" (i.e. gets a full amount of energy). Energy of each creature provides information on how recent (current) is the food location information that the creature stores. It is visualized as brightness of creatures (light green ones have recently found food). When creatures collide, they learn from each other where food is (by averaging their knowledge). A newborn creature moves randomly and receives (duplicates) knowledge from the first knowledge-rich creature that it collides with. A creature that cannot find food for a long period of time dies, and a newborn one is created.\\n\\nSee the description of experiment definition for more details on this experiment and on what processes and phenomena can be observed here.\";\n  GLDisplay.desiredsimspeed = 50;\n  TrackingCam.setViewDir(30, 30);\n  TrackingCam.cam_chspeed = 0.1;\n  TrackingCam.cam_trspeed = 1;\n  g_step = 0;\n\n  g_chart = DynaChart.new();\n  g_win = GLDisplay.createWindow(1 + 2 + 4 + 16, \"Global information recency\", g_chart);\n  g_win.backcolor = 0x80ddddff;\n  g_win.size_x = GLDisplay.size_x / 2;\n  g_win.size_y = GLDisplay.size_y / 3;\n}\n\nfunction onShowStep()\n{\n  TrackingCam.cam_dir += 0.05;\n  g_step++;\n  if (g_step > 30)\n  {\n    var inf=0.0;\n    for(var cr in Populations[0])\n      if (cr.data->food != null) //knows some location of food\n        inf+=cr.energy;\n    g_chart.add(int(inf/10));\n    g_step = 0;\n  }\n}\n\nfunction onSelectionChange()\n{\n  var t = \"\";\n  if (CreatureSelection.count > 0)\n  {\n    var c = CreatureSelection.get(0);\n    if (c.data->food==null) t+=\"\\nThis agent has no idea where food is.\\n\"; else\n      t += \"\\nThis agent thinks that food is at (\"+int(c.data->food.x)+\",\"+int(c.data->food.y)+\"), last seen \"+int(c.energy0-c.energy)+\" steps ago.\\n\";\n  }\n  GLDisplay.banner = t;\n}\n\nfunction onResize()\n{\n  g_win.size_x = GLDisplay.size_x / 3;\n  g_win.size_y = GLDisplay.size_y / 3;\n  g_win.pos_x = GLDisplay.size_x - g_win.size_x;\n  g_win.pos_y = GLDisplay.size_y - g_win.size_y - 18;\n}\n\nfunction ShowProperties_quit_call()\n{\n  GLDisplay.quit();\n}\n\nfunction ShowProperties_restart_call()\n{\n  Simulator.init();\n  Simulator.print(\"Restarting experiment...\");\n  g_chart.clear();\n  g_step = 0;\n}\n\nfunction ShowProperties_shareknowledge_set()\n{\n  ExpProperties.shareknowledge=ShowProperties.shareknowledge;\n}\n\nfunction ShowProperties_foodplacement_set()\n{\n  ExpProperties.foodplacement=ShowProperties.foodplacement;\n}\n\n"
+  },
+  {
+    "id": "restart",
+    "_classname": "property",
+    "type": "p",
+    "name": "Restart"
+  },
+  {
+    "id": "quit",
+    "_classname": "property",
+    "type": "p",
+    "name": "Quit"
+  },
+  {
+    "id": "shareknowledge",
+    "_classname": "property",
+    "help": "Share knowledge about food position when two creatures collide?",
+    "type": "d 0 1",
+    "name": "Share knowledge"
+  },
+  {
+    "id": "foodplacement",
+    "group": "Energy",
+    "type": "d 0 1 ~Neighboring~Random",
+    "name": "Food placement",
+    "_classname": "property",
+    "help": "Random placement contradicts 'learning food location' and therefore constitutes a test/benchmark for this experiment definition."
+  }
+]

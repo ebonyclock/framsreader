@@ -1,0 +1,9 @@
+[
+  {
+    "name": "Framsbots game",
+    "_classname": "show",
+    "info": "You start in the middle. Run away from hostile creatures!\nClick somewhere to make your creature go there and try to make enemies hit each other.\nEat apples to gain energy and lives.",
+    "expdef": "framsbots",
+    "code": "\nfunction onLoad()\n{\n  // set default values\n  ExpProperties.level = 0;\n  GLDisplay.desiredsimspeed = 200;\n  // init game experiment\n  onExpInit();\n}\n\nfunction onShowStep()\n{\n  var b;\n\n  // display banner from expdef\n  b = ExpState.banner + \"\\n\";\n\n  // and additional info\n  if (ShowManager.userspeed>0)\n  {\n    b += \"Enemies left: \" + ExpState.livingEnemies;\n    b += \"\\n\";\n    b += \"Lifes: \" + ExpState.lifes;\n  }\n  else\n  {\n    b += \"Paused\";\n  }\n  GLDisplay.banner = b;\n}\n\n"
+  }
+]

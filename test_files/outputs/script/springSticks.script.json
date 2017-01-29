@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Toy Spring Sticks",
+    "_classname": "script",
+    "code": "function main()\n{\n  var n=30;\n  var r=0.15;\n  var cycles=5.0;\n  var parts=\"p:0,0,0\\n\";\n  var joints=\"\";\n  var i;\n\n  for(i=0;i<n;i++)\n  {\n    var a=(6.282*cycles*i)/n;\n    var x=(1.0*i)/n,y=r*Math.sin(a),z=r*Math.cos(a);\n    parts+=\"p:\"+x+\",\"+y+\",\"+z+\"\\n\";\n    joints+=\"j:\"+i+\",\"+(i+1)+\"\\n\";\n  }\n  parts+=\"p:1,0,0\\n\";\n  joints+=\"j:\"+i+\",\"+(i+1)+\"\\n\";\n  var gen=\"//0\\n\"+parts+joints;\n  WireframeAppearance.set(\"j_\",gen,-3);\n}\n",
+    "help": "Make creature joints look like springs"
+  }
+]

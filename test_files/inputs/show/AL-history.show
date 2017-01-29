@@ -1,0 +1,261 @@
+show:
+name:Your creatures
+expdef:standard
+code:~
+@include "AL-shared.inc"
+
+global g_trash_submenu;
+
+function onLoad()
+{
+GLDisplay.simsteps = 0;
+GLDisplay.user_interaction=0;
+GLDisplay.world_visibility=1;
+GLDisplay.back_action="";
+ShowManager.dispinfo=0;
+
+loadCurrent();
+var cur=GenePools[0][0];
+
+loadHistory();
+
+var but;
+
+but=GUI.newButton("use","Use selected");
+but.bgcolor=0xff66cc66; but.fgcolor=0xffffffff;
+but.setAutolayout(0,0,0,0, 0.31,0.01, 0.3,0.15);
+but=GUI.newButton("cancel","Back");
+but.setAutolayout(0,0,0,0, 0.01,0.01, 0.3,0.15);
+
+var gr=GUI.newGroup("namegroup");
+var lab=GUI.newLabel("namelabel","Name:");
+lab.addTo(gr);
+lab.setAutolayout(0,0,0,0, 0,0,0.7,0.5);
+var ed=GUI.newTextField("name","?");
+ed.font=3;
+ed.addTo(gr);
+ed.setAutolayout(0,0,0,0, 0,0.5,0.7,0.5);
+var save=GUI.newButton("save","Save");
+save.visible=0;
+save.setAutolayout(0,0,0,0, 0.71,0,0.29,1);
+save.addTo(gr);
+
+var li=GUI.newList("hist");
+layoutHistory();
+for(var g in GenePools[0])
+   li.addItem(labelForGenotype(g),"creature:"+g.genotype);
+li.selected=findGenotypeAndName(cur.name,cur.genotype,GenePools[0]);
+if (li.selected<0)
+   li.selected=li.itemcount-1;
+li.scrollIntoView(li.selected);
+
+g_trash_submenu=[];
+but=GUI.newButton("del","Delete selected");
+//but.setAutolayout(0,0,0,0, 0.01,1.0-0.15-0.01, 0.3,0.15);
+but.bgcolor=0xffff0000; but.fgcolor=0xffffffff;
+but.visible=0;
+g_trash_submenu.add(but);
+but=GUI.newButton("del_all","Delete all");
+//but.setAutolayout(0,0,0,0, 1.0-0.3-0.01,1.0-0.15-0.01, 0.3,0.15);
+but.bgcolor=0xffff0000; but.fgcolor=0xffffffff;
+but.visible=0;
+g_trash_submenu.add(but);
+
+but=GUI.newButton("trash","");
+but.image="trash-icon-shadow";
+but.style=1;
+but.addTo(GUI.top_right);
+
+g_helptxt="This is a scrollable list of all the creatures you saved previously. You can select any of them and improve it further.";
+addHelpButton(GUI.top_right);
+}
+
+function genotypeHistoryLabel(vars)
+{
+var ret="";
+if (vars->selections) ret+="sel:"+vars->selections+" ";
+if (vars->evaluations) ret+="evol:"+vars->evaluations+" ";
+if (vars->imported) ret+="imported ";
+if (vars->edited) ret+="edited ";
+return ret;
+}
+
+function labelForGenotype(g)
+{
+var label=g.name;
+var history=genotypeHistoryLabel(g.data);
+if (history!="") label+="\n"+history;
+label+="\t";
+if (g.velocity>0)
+    label+="Velocity: %.6f\n" % g.velocity;
+if (g.vertpos>0)
+    label+="Height: %.2f\n" % g.vertpos;
+label+=formatTime(g.data->time);
+return label; 
+}
+
+function formatTime(t)
+{
+if (t==0) return "";
+var txt="%t" % t;
+txt=String.substr(txt,8,3)+String.substr(txt,4,4)+String.substr(txt,11,5);
+if (String.left(txt,1)==" ") txt=String.substr(txt,1,999);
+return txt;
+}
+
+function deleteSelected()
+{
+var li=GUI["hist"];
+var sel=li.selected;
+if (sel<0) return; //no selection
+if (sel==0) return; //initial genotype
+li.removeItem(sel);
+GenePools[0][sel].delete();
+saveHistory();
+onGUIEvent(GUI["trash"],null);
+}
+
+function deleteAll()
+{
+var li=GUI["hist"];
+li.selected=0;
+for(var i=li.itemcount-1;i>0;i--)
+  {
+  li.removeItem(i);
+  GenePools[0][i].delete();
+  }
+saveHistory();
+onGUIEvent(GUI["trash"],null);
+}
+
+function useSelected()
+{
+var li=GUI["hist"];
+var sel=li.selected;
+if (sel<0) return;
+
+var r=li.getItemRect(sel);
+if (r)
+   {
+   var m=GUI.newModel("",GenePools[0][sel].genotype);
+   m.rect=r;
+   li.setItemImage(sel,"");
+   m.animSetBegin();
+   m.setRect(-GLDisplay.size_x/2,-GLDisplay.size_y/2,2*GLDisplay.size_x,2*GLDisplay.size_y);
+   m.animSetEnd();
+   m.startAnimation(0.5);
+   GUI.setTimeout("",0.5,function useSelectedLater);
+   }
+
+if (sel==0) //initial genotype
+   {
+   GenePools[0].clear();
+   saveCurrent();
+   }
+else
+   {
+   var g=GenePools[0][sel];
+   GenePools[0].clear();
+   g.moveTo(GenePools[0]);
+   saveCurrent();
+   }
+
+if (!r)
+   ShowManager.show="AL-main";
+}
+
+function useSelectedLater()
+{
+ShowManager.show="AL-main";
+}
+
+function onShowStep()
+{
+var h=GUI["hist"];
+if (h.align==0)
+   TrackingCam.setViewDir(10.0*(h.scroll_x/GLDisplay.size_x),0);
+else
+   TrackingCam.setViewDir(0,10.0*(h.scroll_y/GLDisplay.size_y));
+}
+
+function nameClicked(arg)
+{
+if (arg==1)
+    GUI["save"].visible=1;
+else if (arg==0)
+    GUI["save"].visible=0;
+}
+
+function histClicked()
+{
+var i=GUI["hist"].selected;
+GUI["name"].text=GenePools[0][i].name;
+GUI["namegroup"].visible=(i>0);
+}
+
+function saveClicked()
+{
+var i=GUI["hist"].selected;
+if (i<=0) return;
+var g=GenePools[0][i];
+var n=GUI["name"].text;
+if (g.name==n) return;
+g.name=n;
+saveHistory();
+GUI["hist"].setItemLabel(i,labelForGenotype(g));
+}
+
+function onGUIEvent(elem,arg)
+{
+if (elem.name!="name")
+    GUI["name"].focus=0;
+if (handleHelp(elem)) return;
+switch(elem.name)
+	{
+	case "trash":
+	     handleSubMenu(elem,g_trash_submenu,1,0.25,0.14);
+	     return;
+	case "del": deleteSelected(); break;
+	case "del_all": deleteAll(); break;
+	case "use": useSelected(); break;
+	case "cancel": ShowManager.show="AL-top"; break;
+	case "hist": histClicked(); break;
+        case "name": nameClicked(arg); break;
+        case "save": saveClicked(); break;
+	}
+}
+
+function onResize()
+{
+layoutHistory();
+}
+
+function layoutHistory()
+{
+var li=GUI["hist"];
+var h=GUI.fontHeight(GUI["name"].font);
+GUI["namegroup"].setAutolayout(0,0,0,4*h, 0.01,0.175,0.98,0);
+if (GLDisplay.size_x>GLDisplay.size_y)
+   {
+   li.align=0; li.valign=2;
+   li.setAutolayout(0,4*h,0,-4*h, 0.01,0.2,0.98,0.8);
+   li.rowheight=GLDisplay.size_x/4;
+   }
+else
+   {
+   li.align=1; li.valign=0;
+   li.setAutolayout(0,4*h,0,-4*h, 0.01,0.2,0.98,0.8);
+   li.rowheight=GLDisplay.size_y/5;
+   }
+}
+
+function onKey(code)
+{
+if (code==GUI.KEY_BACK)
+   {
+   if (closePopup()) return 1;
+   onGUIEvent(GUI["cancel"],null);
+   return 1;
+   }
+return 0;
+}

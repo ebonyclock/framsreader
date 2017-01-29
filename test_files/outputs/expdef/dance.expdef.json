@@ -1,0 +1,44 @@
+[
+  {
+    "name": "Dance",
+    "_classname": "expdef",
+    "info": "A synchronous framsdance :-)",
+    "code": "\n//by MacKo, 2004\n//sound and show->expdef+show, 2007\n//fixed sound and other tweaks, 2016\n\nglobal g_tempo;\nglobal g_currentarrangement;\nglobal g_arrangerequest;\nglobal g_beat; //beat params vector\n\nfunction onExpDefLoad()\n{\n\tMath.seed = Math.time;\n\tg_currentarrangement = 0;\n\tg_arrangerequest = 100;\n\tg_beat = [1, 2, 3, 4, 5, 6, 7, 8];\n\tSimulator.import(\"show_noevol.sim\");\n\tWorld.wrldsiz = 60.0;\n\tWorld.wrldbnd = 2;\n\n\tvar pop = Populations[0]; //everything in this show concerns group 0\n\tpop.nnsim = 1;\n\tpop.death = 0;\n\tpop.energy = 0;\n\tpop.selfmask = 0;\tpop.othermask = 0; //ignore collisions\n\n\tExpProperties.dancers = 3;\n\tExpProperties_dancers_set();\n\tExpProperties.tempo = 1;\n\tExpProperties_tempo_set();\n\n\tExpProperties_restart_land_call();\n}\n\nfunction onBorn()\n{\n\tplace_randomly(0, 4);\n}\n\nfunction is_muscle(neuro_description)\n{\n\tvar d = String.substr(neuro_description, 0, 1);\n\treturn d == \"|\" || d == \"@\";\n}\n\nglobal g_lastsound;\nfunction danceStep()\n{\n\tvar sin = Math.sin(float(Simulator.stepNumber) / g_tempo);\n\tvar sound = (Simulator.stepNumber % g_tempo) * 4 / g_tempo;\n\tif (g_lastsound != sound)\n\t{\n\t\tplayBeat(sound);\n\t\tg_lastsound = sound;\n\t}\n\tvar pop = Populations[0];\n\tfor (var i = 0; i < pop.size; i++)\n\t{\n\t\tvar cr = pop[i];\n\t\tfor (var j = 0; j < cr.numneurons; j++)\n\t\t{\n\t\t\tif (!is_muscle(cr.getNeuroDef(j).d))\n\t\t\t\tcontinue;\n\n\t\t\tcr.getNeuro(j).hold = 1;\n\t\t\tcr.getNeuro(j).currState = sin * (((j % 2) * 2) - 1);\n\t\t\t//      each 2nd - negative           ^^^^^^^^^^^\n\t\t}\n\t}\n}\n\nfunction newBeat()\n{\n\tvar i;\n\tfor(i = 0; i < 4; i++) g_beat.set(i, 8.1758 * Math.pow(2, (20.0 + Math.random(60)) / 12)); //base freq\n\tfor(i = 5; i < 8; i++) g_beat.set(i, Math.random(5) * 15); //variability\n\tfor(i = 0; i < 4; i++) if (Math.random(8) == 0) g_beat.set(i, g_beat[Math.random(4)]); //same base freq twice\n\tfor(i = 0; i < 4; i++) if (Math.random(5) == 0) g_beat.set(i, 0); //'no sound' marker\n}\n\nfunction playBeat(phase)\n{\n\tif (ExpProperties.sound == 0 || phase < 0 || phase > 3) return;\n\tif (g_beat[phase] <= 0) return;\n\tvar minlength=70; //unfortunately, shorter sounds are not audible under windows\n\tvar lenghts=[1, 1, 1, 1]; //was [3, 1, 2, 1], but sound() is synchronous under windows and we don't want to block for too long (or at all)\n\tSimulator.sound(g_beat[phase] + Math.random(g_beat[4 + phase]) - g_beat[4 + phase] / 2, minlength*lenghts[phase]);\n}\n\n\nfunction newArrangement()\n{\n\tvar pop = Populations[0];\n\tvar supported_arrangements = 3; //3 arrangements supported - see switch(a) below\n\tvar a = (g_currentarrangement + 1 + Math.random(supported_arrangements-1)) % supported_arrangements; //new arrangement is always different from the current one\n\tvar side = int(Math.sqrt(pop.size) + 0.999);\n\tvar spacing = World.wrldsiz / (side + 1); // grid spacing\n\tSimulator.print(\"Setting arrangement #\" + a + \", \" + pop.size + \" creatures.\");\n\tfor (var i = 0; i < pop.size; i++)\n\t{\n\t\tvar x, y; //new (target) positions\n\t\tswitch (a)\n\t\t{\n\t\tcase 0:  //single line\n\t\t\tx = (0.5 + i) * World.wrldsiz / pop.size;\n\t\t\ty = World.wrldsiz / 2;\n\t\t\tbreak;\n\t\tcase 1:  //grid\n\t\t\tx = float(1 + i % side) * spacing;\n\t\t\ty = float(1 + i / side) * spacing;\n\t\t\tbreak;\n\t\tcase 2:  //circle\n\t\t\tx = World.wrldsiz / 2.0 + World.wrldsiz / 3.0 * Math.cos(Math.twopi * i / pop.size);\n\t\t\ty = World.wrldsiz / 2.0 + World.wrldsiz / 3.0 * Math.sin(Math.twopi * i / pop.size);\n\t\t\tbreak;\n\t\t}\n\t\tvar cr = pop.get(i);\n\t\tcr.data->current = (cr.bboxLow.x, cr.bboxLow.y, 0); //note: XYZ objects\n\t\tcr.data->target = (x - (cr.bboxSize.x + cr.bboxSize.y + cr.bboxSize.z) / 6,\n\t\t                   y - (cr.bboxSize.x + cr.bboxSize.y + cr.bboxSize.z) / 6, 0); //save new arrangement position\n\t\tcr.data->progress = 0.0; //arrangement progress counter\n\t}\n\t\n\tg_currentarrangement = a;\n\n\t/*other arrangement ideas:\n\tline+frontman\n\tcircle+middleman\n\t2 lines\n\t...and perhaps 3D arrangements for water dances - sphere, 3D grid.\n\n\tanother idea - modify the world map to make the scene more interesting\n\t(frontman standing on a higher block etc.)\n\tWorld.wrldtyp = 1;\n\tWorld.wrldmap = \"m 3 3 676787676\";\n\t*/\n\n\tnewBeat();\n}\n\nfunction arrange()\n{\n\tvar pop = Populations[0];\n\tvar i, p;\n\tfor (i = 0; i < pop.size; i++)\n\t{\n\t\tvar cr = pop.get(i);\n\t\tif (cr.data->progress != null)\n\t\t{\n\t\t\t//Simulator.print(\"#\"+i+\" \"+cr.data->current+\", \"+cr.data->target+\", \"+cr.data->progress);\n\t\t\tif (cr.data->progress < 100) //while moving to new positions...\n\t\t\t{\n\t\t\t\tcr.data->progress++;\n\t\t\t\tp = cr.data->progress / 100.0;\n\t\t\t}\n\t\t\telse   //keep it in the previously arranged position\n\t\t\t{\n\t\t\t\tcr.data->current = (cr.bboxLow.x, cr.bboxLow.y, 0); //current position\n\t\t\t\tp = 0.1; //1.0=immediately move to the desired position. 0.1=be soft\n\t\t\t}\n\t\t\tcr.locationSetBboxLow(cr.data->current.x + (cr.data->target.x - cr.data->current.x)*p,\n\t\t\t           cr.data->current.y + (cr.data->target.y - cr.data->current.y)*p,\n\t\t\t           cr.bboxLow.z);\n\t\t}\n\t}\n}\n\n@include \"standard_select.inc\"\n@include \"standard_placement.inc\"\n\nfunction onStep()\n{\n\tvar pop = Populations[0];\n\tif (pop.size < ExpProperties.MaxCreated)\n\t{\n\t\tvar g = selectedForCreationInPool(GenePools[0]);\n\t\tif (g)\n\t\t{\n\t\t\tif (g.is_valid)\n\t\t\t\tpop.add(g);\n\t\t\telse\n\t\t\t\tSimulator.message(\"invalid genotype - ignored: \" + Genotype.info, 1);\n\t\t}\n\t}\n\telse while (pop.size > ExpProperties.MaxCreated)\n\t\t{\n\t\t\tpop.delete(pop.size - 1);\n\t\t}\n\n\tdanceStep();\n\tif ((Simulator.stepNumber % 3000) == 0 || Simulator.stepNumber == g_arrangerequest)\n\t\tnewArrangement();\n\tif ((Simulator.stepNumber % 1000) == 0)\n\t\tnewBeat();\n\tarrange();\n}\n\nfunction removeTooBigOrNoMuscles()\n{\n\tvar pool = GenePools[0];\n\tfor (var i = pool.size - 1; i >= 0; i--)\n\t{\n\t\tvar m = Model.newFromGeno(pool[i].geno);\n\t\tif (m.bboxSize.x > World.wrldsiz / 6 || m.bboxSize.y > World.wrldsiz / 6 || m.bboxSize.z > World.wrldsiz / 6)\n\t\t{\n\t\t\tSimulator.print(\"Dismissed too big dancer, \" + pool[i].name + \".\");\n\t\t\tpool.delete(i);\n\t\t}\n\t\t\n\t\tvar muscles=0;\n\t\tfor (var j = 0; j < m.numneurons; j++)\n\t\t{\n\t\t\tif (!is_muscle(m.getNeuroDef(j).d))\n\t\t\t\tmuscles++;\n\t\t}\n\t\tif (muscles==0)\n\t\t{\n\t\t\tSimulator.print(\"Dismissed: cannot dance with no muscles, \" + pool[i].name + \".\");\n\t\t\tpool.delete(i);\n\t\t}\n\t}\n}\n\nfunction restart(wrldwat, creath, genepool)\n{\n\tWorld.wrldwat = wrldwat;\n\tExpProperties.creath = creath;\n\tPopulations[0].clear();\n\tGenePools[0].clear();\n\tSimulator.import(genepool);\n\tremoveTooBigOrNoMuscles();\n\tg_arrangerequest = Simulator.stepNumber + 20;\n}\n\nfunction ExpProperties_restart_land_call()\n{\n\trestart(-1, 0.1, \"walking.gen\");\n}\n\nfunction ExpProperties_restart_water_call()\n{\n\trestart(8, -0.5, \"swimming.gen\"); //-0.5 = half depth\n}\n\n// starting with v4.0rc2 we can no longer access globals defined in other code modules (dance.expdef/dance.show)\n// dance.show calls this function to change g_arrangerequest (could also use ExpState.arrangerequest which is directly accessible in both modules)\nfunction setArrangeRequest(v)\n{\n\tg_arrangerequest = v;\n}\n\nfunction ExpProperties_arrangement_call()\n{\n\tnewArrangement();\n}\n\nfunction ExpProperties_dancers_set()\n{\n\tExpProperties.MaxCreated = [2, 3, 4, 9, 16, 25][ExpProperties.dancers];\n\tg_arrangerequest = Simulator.stepNumber + 20;\n}\n\nfunction ExpProperties_tempo_set()\n{\n\tg_tempo = [80, 50, 20][ExpProperties.tempo];\n}\n"
+  },
+  {
+    "id": "restart_land",
+    "_classname": "property",
+    "type": "p",
+    "name": "Land dance"
+  },
+  {
+    "id": "restart_water",
+    "_classname": "property",
+    "type": "p",
+    "name": "Water dance"
+  },
+  {
+    "id": "dancers",
+    "_classname": "property",
+    "type": "d 0 5 ~2~3~4~9~16~25",
+    "name": "Number of dancers"
+  },
+  {
+    "id": "tempo",
+    "_classname": "property",
+    "type": "d 0 2 ~Slow~Medium~Fast",
+    "name": "Dance tempo"
+  },
+  {
+    "id": "arrangement",
+    "_classname": "property",
+    "type": "p",
+    "name": "Change arrangement"
+  },
+  {
+    "id": "sound",
+    "_classname": "property",
+    "type": "d 0 1 1",
+    "name": "Beat"
+  }
+]

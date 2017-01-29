@@ -1,0 +1,9 @@
+[
+  {
+    "name": "Reload neuron definitions",
+    "_classname": "script",
+    "code": "function main()\n{\n  Simulator.reloadNeurons();\n}\n",
+    "group": "",
+    "help": "Reloads scripts/*.neuro files"
+  }
+]

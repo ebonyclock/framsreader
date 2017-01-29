@@ -1,0 +1,10 @@
+[
+  {
+    "description": "Sample custom neuron class. This one works just like Rnd neuron.",
+    "name": "Rnd_Test",
+    "_classname": "class",
+    "prefoutput": 1,
+    "code": "function init()\n{}\n\nfunction go()\n{\n  Neuro.state = Math.rnd01 * 2.0 - 1.0;\n}\n",
+    "longname": "Random value"
+  }
+]

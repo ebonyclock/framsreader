@@ -1,0 +1,18 @@
+[
+  {
+    "prefinputs": -1,
+    "description": "Propagates weighted inputs onto the output, but occassionally generates a random value",
+    "name": "Nn",
+    "_classname": "class",
+    "prefoutput": 1,
+    "code": "function go()\n{\n  var s = Neuro.weightedInputSum;\n  if (Math.rnd01 < NeuroProperties.e)\n    s = (Math.rnd01 * 2) - 1.0;\n  Neuro.state = s;\n}\n",
+    "icon": "40,3,3,25,0,25,100,75,50,25,0,1,75,50,100,50,11,30,50,38,50,40,48,42,52,44,47,46,48,48,57,50,42,52,52,54,47,57,50,65,50",
+    "longname": "Noisy neuron"
+  },
+  {
+    "id": "e",
+    "_classname": "property",
+    "type": "f 0.0 0.1",
+    "name": "Error rate"
+  }
+]

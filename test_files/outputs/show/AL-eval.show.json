@@ -1,0 +1,9 @@
+[
+  {
+    "name": "Performance evaluator",
+    "_classname": "show",
+    "info": "",
+    "expdef": "standard-eval",
+    "code": "\n@include \"AL-shared.inc\"\n\nfunction onLoad()\n{\n  GLDisplay.desiredsimspeed = 9999;\n  GLDisplay.user_interaction=0;\n  ShowManager.dispinfo=0;\n\n  GUI.newLabel(\"info\",\"Please wait, evaluating...\").setAutolayout(0,0,0,0, 0,0,1,1);\n  GUI->info.align=0;\n\n  loadCurrent();\n  Simulator.import(\"show_evol.sim\");\n  ExpProperties.evalsavefile = \"\"; //don't save to file\n  ExpProperties.evalcount = 4;\n  ExpProperties.evalsavedata=\"eval_results\";\n  ExpProperties.evalplan=\"show_noevol.sim:velocity,vertpos\\n\"\n    + \"show_water.sim:velocity\";\n  Simulator.init();\n}\n\nfunction onShowStep()\n{\nif (GLDisplay.desiredsimspeed==0)\n  { //standard-eval called stop()\n  var g=GenePools[0][0];\n  var evals=g.data->eval_results;\n  g.velocity=evals[\"show_noevol.sim\"]->velocity;\n  g.vertpos=evals[\"show_noevol.sim\"]->vertpos;\n  g.data->water_velocity=evals[\"show_water.sim\"]->velocity;\n  g.data->eval_results=null;\n  addHistory(g);\n  GenePools[0].clear();\n  g.moveTo(GenePools[0]);\n  saveCurrent();\n  ShowManager.show=\"AL-main\";\n  }\n}\n"
+  }
+]

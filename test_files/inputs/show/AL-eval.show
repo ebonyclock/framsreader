@@ -1,0 +1,45 @@
+show:
+name:Performance evaluator
+info:
+expdef:standard-eval
+code:~
+
+@include "AL-shared.inc"
+
+function onLoad()
+{
+  GLDisplay.desiredsimspeed = 9999;
+  GLDisplay.user_interaction=0;
+  ShowManager.dispinfo=0;
+
+  GUI.newLabel("info","Please wait, evaluating...").setAutolayout(0,0,0,0, 0,0,1,1);
+  GUI->info.align=0;
+
+  loadCurrent();
+  Simulator.import("show_evol.sim");
+  ExpProperties.evalsavefile = ""; //don't save to file
+  ExpProperties.evalcount = 4;
+  ExpProperties.evalsavedata="eval_results";
+  ExpProperties.evalplan="show_noevol.sim:velocity,vertpos\n"
+    + "show_water.sim:velocity";
+  Simulator.init();
+}
+
+function onShowStep()
+{
+if (GLDisplay.desiredsimspeed==0)
+  { //standard-eval called stop()
+  var g=GenePools[0][0];
+  var evals=g.data->eval_results;
+  g.velocity=evals["show_noevol.sim"]->velocity;
+  g.vertpos=evals["show_noevol.sim"]->vertpos;
+  g.data->water_velocity=evals["show_water.sim"]->velocity;
+  g.data->eval_results=null;
+  addHistory(g);
+  GenePools[0].clear();
+  g.moveTo(GenePools[0]);
+  saveCurrent();
+  ShowManager.show="AL-main";
+  }
+}
+~

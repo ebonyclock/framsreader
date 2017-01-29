@@ -1,0 +1,57 @@
+[
+  {
+    "name": "Boids",
+    "_classname": "show",
+    "info": "Boids, developed by Craig Reynolds in 1986, is an artificial life program that simulates the flocking behaviour of birds.\n\nAs with most artificial life simulations, Boids is an example of emergent behaviour; that is, the complexity of Boids arises from the interaction of individual agents (the boids, in this case) adhering to a set of simple rules. The rules applied in the simplest Boids world are as follows:\n\n    * separation: steer to avoid crowding local flockmates\n    * alignment: steer towards the average heading of local flockmates\n    * cohesion: steer to move toward the average position of local flockmates\n",
+    "expdef": "boids",
+    "code": "\nglobal g_step;\n\nfunction onLoad()\n{\n//World.wrldsiz=50; //follow expdef behavior\nGLDisplay.desiredsimspeed = 15;\nShowProperties_set();\nTrackingCam.cam_tracking=2;\nTrackingCam.cam_trspeed=2;\ng_step = 0;\n}\n\nfunction ShowProperties_set()\n{\nExpProperties.crcount=[1,30,75,200][ShowProperties.crcount];\nExpProperties.rule1=ShowProperties.rule1;\nExpProperties.rule2=ShowProperties.rule2;\nExpProperties.rule3=ShowProperties.rule3;\nExpProperties.rule4=ShowProperties.rule4;\nExpProperties.range=[3,6,9][ShowProperties.range];\nExpProperties.separ=[1,2,4][ShowProperties.separ];\nExpProperties.worldmap=ShowProperties.worldmap;\n}\n\nfunction onShowStep()\n{\ng_step++;\nif (g_step > 400)\n  {\n  if (CreatureSelection.count>0)\n        CreatureSelection.clear();\n  else\n\t{\n\tTrackingCam.cam_trspeed=10;\n        CreatureSelection.add(Populations[0][0]);\n\t}\n  g_step=0;\n  }\n}\n\nfunction onMouseClick(options, xy, point, vector)\n{\ng_step=-2000;\nreturn 0;\n}\n\n"
+  },
+  {
+    "id": "crcount",
+    "_classname": "property",
+    "type": "d 0 3 1 ~1~30~75~200",
+    "name": "Number of boids"
+  },
+  {
+    "id": "rule1",
+    "_classname": "property",
+    "type": "d 0 1 1",
+    "name": "Rule 1 - Separation"
+  },
+  {
+    "id": "rule2",
+    "_classname": "property",
+    "type": "d 0 1 1",
+    "name": "Rule 2 - Alignment"
+  },
+  {
+    "id": "rule3",
+    "_classname": "property",
+    "type": "d 0 1 1",
+    "name": "Rule 3 - Cohesion"
+  },
+  {
+    "id": "rule4",
+    "_classname": "property",
+    "type": "d 0 1 1",
+    "name": "Rule 4 - Obstacle avoidance"
+  },
+  {
+    "id": "range",
+    "_classname": "property",
+    "type": "d 0 2 1 ~Small~Medium~Big",
+    "name": "Neighborhood range"
+  },
+  {
+    "id": "separ",
+    "_classname": "property",
+    "type": "d 0 2 1 ~Small~Medium~Big",
+    "name": "Separation distance"
+  },
+  {
+    "id": "worldmap",
+    "_classname": "property",
+    "type": "d 0 5 2 ~No obstacles~Single peak~Three peaks~Four peaks~Corridor~Forest",
+    "name": "World setting"
+  }
+]

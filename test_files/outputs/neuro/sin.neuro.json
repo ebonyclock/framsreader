@@ -1,0 +1,31 @@
+[
+  {
+    "prefinputs": 1,
+    "description": "Sample custom neuron class. This one works just like the \"Sin\" neuron.",
+    "name": "Sin_Test",
+    "_classname": "class",
+    "prefoutput": 1,
+    "code": "function init()\n{ NeuroProperties.t_priv=NeuroProperties.t; }\n\nfunction go()\n{ // \"t_priv\" is used because \"t\" is constrained to 0..2pi\n  NeuroProperties.t_priv = NeuroProperties.t_priv + NeuroProperties.f0 + Neuro.weightedInputSum;\n  Neuro.state = Math.sin(NeuroProperties.t_priv);\n}\n",
+    "icon": "46,3,12,75,50,71,37,62,28,50,25,37,28,28,37,25,50,28,62,37,71,50,75,62,71,71,62,75,50,1,75,50,100,50,5,35,50,40,35,45,35,55,65,60,65,65,50",
+    "longname": "Sinus Generator"
+  },
+  {
+    "id": "f0",
+    "_classname": "property",
+    "type": "f -1.0 1.0 0.06283185307",
+    "name": "base frequency"
+  },
+  {
+    "id": "t",
+    "_classname": "property",
+    "type": "f 0 6.283185307 0",
+    "name": "time"
+  },
+  {
+    "id": "t_priv",
+    "_classname": "property",
+    "flags": 32,
+    "type": "f",
+    "name": "time (private)"
+  }
+]

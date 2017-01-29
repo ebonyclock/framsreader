@@ -1,0 +1,13 @@
+[
+  {
+    "description": "Detects only energy from group #0",
+    "vhints": 32,
+    "name": "S0",
+    "_classname": "class",
+    "prefoutput": 1,
+    "code": "function init()\n{}\n\nfunction go()\n{\n  //var t=\"calculating neuron S0 for creature '\"+Neuro.creature.name+\"' in group '\"+Neuro.creature.group.name;\n  //t+=\"', position: \"+Neuro.position_x+\", \"+Neuro.position_y+\", \"+Neuro.position_z;\n  //Simulator.print(t);\n  Neuro.state = Populations[0].senseCreaturesProperty(\n\t\tNeuro.position_x, Neuro.position_y, Neuro.position_z,\n\t\t\"energy\", Neuro.creature);\n  //Simulator.print(\"sense=\"+Neuro.state);\n}\n",
+    "icon": "64,5,7,100,50,90,50,90,40,70,40,80,50,70,60,90,60,90,50,3,10,40,15,45,15,55,10,60,5,20,30,25,35,30,45,30,55,25,65,20,70,4,15,35,20,40,22,50,20,60,15,65,5,75,50,50,50,45,45,40,50,45,55,50,50",
+    "preflocation": 1,
+    "longname": "Smell group 0"
+  }
+]

@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Playground",
+    "_classname": "show",
+    "expdef": "standard",
+    "code": "\n@include \"AL-shared.inc\"\n@include \"AL-sending.inc\"\n\nfunction onBack()\n{\nif (closePopup()) return;\nShowManager.show=\"AL-main\";\n}\n\nfunction onLoad()\n{\nGLDisplay.desiredsimspeed = 50;\nGLDisplay.user_interaction=4+2+1;\nGLDisplay.world_visibility=1+2+4;\nShowManager.dispinfo=0;\nGLDisplay.back_action=\"onBack\";\n\nWorld.wrldsiz=40;\nWorld.wrldbnd=1;\n\nif (_saved_water==null) //if so, this is the first run because it is not initialized\n  _saved_water=0;\nShowProperties.water=_saved_water;\n\nShowProperties_water_set();\nShowProperties_envtype_set();\n\nloadCurrent();\nPopulations[0].energy=0;\nPopulations[0].death=0;\nvar cr = Populations[0].add(GenePools[0][0]);\ncr.nnenabled = 1;\n\nCreatureSelection.clear();\nCreatureSelection.add(cr);\nTrackingCam.cam_zoom = 0.25;\nTrackingCam.cam_dir=80;\n\nvar but;\nbut=GUI.newButton(\"feed\",\"Drop food\");\nbut.setAutolayout(0,0,0,0, 0.35,0.01, 0.3,0.15);\n\ng_helptxt=\"Feed your creature by dropping food. Switch to 'manipulator' mode and use your finger to drag a creature (or food) around the world.\\n\\nClick the 'menu' button to adjust the environment.\";\n\nbut=GUI.newButton(\"share\",\"\");\nbut.image=\"share-icon-shadow\";\nbut.style=1;\nbut.addTo(GUI.top_right);\n\naddHelpButton(GUI.top_right);\n\ng_hide_screenshot=[\"share\",\"feed\",\"helpbut\"];\n}\n\nfunction beforeLoad()\n{\nGLDisplay.menu_visible=0;\n}\n\nfunction onGUIEvent(elem,arg)\n{\nif (handleHelp(elem)) return;\nif (handleSharing(elem)) return;\nswitch(elem.name)\n {\n case \"feed\":\n  {\n  var food = Populations[1].add(\"//0\\nm:Vstyle=food\\np:\");\n  var cr= Populations[0][0];\n  food.locationSetBboxLow(cr.bboxLow.x+cr.bboxSize.x*Math.rnd01-food.bboxSize.x*0.5,cr.bboxLow.y+cr.bboxSize.y*Math.rnd01-food.bboxSize.y*0.5,3);\n  return;\n  }\n\n case \"share\":\n  GUI.send();\n  break;\n }\n}\n\nfunction onKey(code)\n{\nif (code==GUI.KEY_BACK)\n   {\n   onBack();\n   return 1;\n   }\nreturn 0;\n}\n\nfunction ShowProperties_envtype_set()\n{\nswitch(ShowProperties.envtype)\n   {\n   case 0:\n\t   World.wrldtyp=0;\n\t   break;\n   case 1:\n\t   World.wrldtyp=1;\n\t   World.wrldmap=\"m 5 5 55555 55555 55955 55555 55555\";\n\t   break;\n   case 2:\n\t   World.wrldtyp=1;\n\t   World.wrldmap=\"m 3 3 1-7 1-7 1-7\";\n\t   break;\n   case 3:\n\t   World.wrldtyp=1;\n\t   World.wrldmap=\"m 4 4 33-5 5555 6555 65-8\";\n\t   break;\n   }\n}\n\nfunction ShowProperties_water_set()\n{\n  World.wrldwat = [ -0.5, 1.0, 3.5][ShowProperties.water];\n  _saved_water=ShowProperties.water;\n}\n\n"
+  },
+  {
+    "id": "envtype",
+    "_classname": "property",
+    "type": "d 0 3 3 ~Flat~Tower~Slope~Playground",
+    "name": "Environment"
+  },
+  {
+    "id": "water",
+    "_classname": "property",
+    "type": "d 0 2 0 ~Low~Medium~High",
+    "name": "Water level"
+  }
+]

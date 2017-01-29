@@ -3,17 +3,15 @@ import unittest
 from nose_parameterized import parameterized
 import os
 import json
+import re
+import glob
 
 import framsreader as fr
 
 test_files_root = "test_files"
 input_files_root = os.path.join(test_files_root, "inputs")
 output_files_root = os.path.join(test_files_root, "outputs")
-
-gen_input_files = [f for f in os.listdir(input_files_root) if f.endswith(".gen")]
-expdef_input_files = [f for f in os.listdir(input_files_root) if f.endswith(".expdef")]
-# all_input_files = ["simple.gen"]
-all_input_files = gen_input_files + expdef_input_files
+input_files = glob.glob(input_files_root + "/*/*")
 
 parse_value_testcases = [
     ('1', 1),
@@ -60,7 +58,7 @@ parse_value_testcases = [
     ('@Serialized:[co[{},{},[[]]],[]]', ['co[{},{},[[]]]', []]),
     ('@Serialized:[co[{},{},[[]]],[1,2,3]]', ['co[{},{},[[]]]', [1, 2, 3]]),
     ('@Serialized:[[1,2, 3],  co[{},{},[[]]]]', [[1, 2, 3], 'co[{},{},[[]]]']),
-    # TODO maybe throw if there is a space?
+    # TODO maybe raise if there is a space?
     ('@Serialized:Population <0x85f53a8>', 'Population <0x85f53a8>'),
 
 ]
@@ -79,7 +77,6 @@ loads_testcases = [
 loads_exception_testcases = [
     'class:\nmlprop:~\n\\~\n~\nasdasd',
     'class:\nmlprop:~\n~\n~\n',
-    'class:\nmlprop:~\n'
 ]
 
 
@@ -168,18 +165,16 @@ class LoadsTest(unittest.TestCase):
 
 
 class LoadTest(unittest.TestCase):
-    @parameterized.expand(all_input_files)
+    @parameterized.expand(input_files)
     def test_correct_load(self, filename):
-        file_path = os.path.join(input_files_root, filename)
-        json_path = os.path.join(output_files_root, filename + ".json")
-        with self.subTest(i=file_path):
-            result = fr.load(file_path)
-            with open(json_path) as json_file:
+        json_output_path = re.sub(input_files_root, output_files_root, filename) + ".json"
+        with self.subTest(i=filename):
+            result = fr.load(filename)
+            with open(json_output_path) as json_file:
                 correct = json.load(json_file)
-            self.assertEqual(len(result), len(correct))
-            # self.assertListEqual(result, correct)
-            for r, c in zip(result, correct):
-                self.assertDictEqual(r, c)
+                self.assertEqual(len(result), len(correct))
+                for r, c in zip(result, correct):
+                    self.assertDictEqual(r, c)
 
 
 if __name__ == '__main__':

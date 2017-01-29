@@ -1,0 +1,134 @@
+show:
+name:Playground
+expdef:standard
+code:~
+
+@include "AL-shared.inc"
+@include "AL-sending.inc"
+
+function onBack()
+{
+if (closePopup()) return;
+ShowManager.show="AL-main";
+}
+
+function onLoad()
+{
+GLDisplay.desiredsimspeed = 50;
+GLDisplay.user_interaction=4+2+1;
+GLDisplay.world_visibility=1+2+4;
+ShowManager.dispinfo=0;
+GLDisplay.back_action="onBack";
+
+World.wrldsiz=40;
+World.wrldbnd=1;
+
+if (_saved_water==null) //if so, this is the first run because it is not initialized
+  _saved_water=0;
+ShowProperties.water=_saved_water;
+
+ShowProperties_water_set();
+ShowProperties_envtype_set();
+
+loadCurrent();
+Populations[0].energy=0;
+Populations[0].death=0;
+var cr = Populations[0].add(GenePools[0][0]);
+cr.nnenabled = 1;
+
+CreatureSelection.clear();
+CreatureSelection.add(cr);
+TrackingCam.cam_zoom = 0.25;
+TrackingCam.cam_dir=80;
+
+var but;
+but=GUI.newButton("feed","Drop food");
+but.setAutolayout(0,0,0,0, 0.35,0.01, 0.3,0.15);
+
+g_helptxt="Feed your creature by dropping food. Switch to 'manipulator' mode and use your finger to drag a creature (or food) around the world.\n\nClick the 'menu' button to adjust the environment.";
+
+but=GUI.newButton("share","");
+but.image="share-icon-shadow";
+but.style=1;
+but.addTo(GUI.top_right);
+
+addHelpButton(GUI.top_right);
+
+g_hide_screenshot=["share","feed","helpbut"];
+}
+
+function beforeLoad()
+{
+GLDisplay.menu_visible=0;
+}
+
+function onGUIEvent(elem,arg)
+{
+if (handleHelp(elem)) return;
+if (handleSharing(elem)) return;
+switch(elem.name)
+ {
+ case "feed":
+  {
+  var food = Populations[1].add("//0\nm:Vstyle=food\np:");
+  var cr= Populations[0][0];
+  food.locationSetBboxLow(cr.bboxLow.x+cr.bboxSize.x*Math.rnd01-food.bboxSize.x*0.5,cr.bboxLow.y+cr.bboxSize.y*Math.rnd01-food.bboxSize.y*0.5,3);
+  return;
+  }
+
+ case "share":
+  GUI.send();
+  break;
+ }
+}
+
+function onKey(code)
+{
+if (code==GUI.KEY_BACK)
+   {
+   onBack();
+   return 1;
+   }
+return 0;
+}
+
+function ShowProperties_envtype_set()
+{
+switch(ShowProperties.envtype)
+   {
+   case 0:
+	   World.wrldtyp=0;
+	   break;
+   case 1:
+	   World.wrldtyp=1;
+	   World.wrldmap="m 5 5 55555 55555 55955 55555 55555";
+	   break;
+   case 2:
+	   World.wrldtyp=1;
+	   World.wrldmap="m 3 3 1-7 1-7 1-7";
+	   break;
+   case 3:
+	   World.wrldtyp=1;
+	   World.wrldmap="m 4 4 33-5 5555 6555 65-8";
+	   break;
+   }
+}
+
+function ShowProperties_water_set()
+{
+  World.wrldwat = [ -0.5, 1.0, 3.5][ShowProperties.water];
+  _saved_water=ShowProperties.water;
+}
+
+~
+
+property:
+id:envtype
+name:Environment
+type:d 0 3 3 ~Flat~Tower~Slope~Playground
+
+property:
+id:water
+name:Water level
+type:d 0 2 0 ~Low~Medium~High
+

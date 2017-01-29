@@ -1,0 +1,21 @@
+[
+  {
+    "name": "Presentation of creatures",
+    "_classname": "show",
+    "info": "Various walking and swimming methods of creatures evolved or constructed by Framsticks users.\nDouble click on creatures for details.",
+    "expdef": "standard",
+    "code": "\nglobal g_bannerlastupdated;\n//todo: onselectionchange should be called after each change in population,\n//but this cannot be easily detected from the .show script.\n\nglobal g_step;\n\nfunction onLoad()\n{\n  Simulator.import(\"show_noevol.sim\");\n  ExpProperties.MaxCreated = 3;\n  ExpProperties.feed = 2;\n  World.wrldbnd = 2;\n  World.wrldsiz = 30;\n  g_step = 1;\n  ShowProperties_walk_call();\n  GLDisplay.desiredsimspeed = 50;\n  g_bannerlastupdated=Math.time;\n}\n\nfunction ShowProperties_swim_call()\n{\n  Populations[0].nnsim = 1;\n  Populations[0].enableperf = 1;\n  TrackingCam.cam_chspeed = 1;\n  TrackingCam.cam_trspeed = 5;\n  World.wrldwat = 10;\n  World.wrldbnd = 0;\n  Populations[0].clear();\n  GenePools[0].clear();\n  Simulator.import(\"swimming.gen\");\n}\n\nfunction ShowProperties_walk_call()\n{\n  Populations[0].nnsim = 2;\n  Populations[0].enableperf = 2;\n  TrackingCam.cam_chspeed = 0.1;\n  TrackingCam.cam_trspeed = 1;\n  World.wrldwat = -1;\n  World.wrldbnd = 2;\n  Populations[0].clear();\n  GenePools[0].clear();\n  Simulator.import(\"walking.gen\");\n}\n\nfunction onShowStep()\n{\n  TrackingCam.cam_dir += 0.02;\n  g_step++;\n  if (g_step > 1111)\n  {\n    g_step = 1;\n    if (CreatureSelection.count > 0)\n      CreatureSelection.clear();\n    else\n    {\n      var g = Populations[0];\n      if (g.size > 0)\n      {\n        CreatureSelection.clear();\n        CreatureSelection.add(g[0]);\n      }\n    }\n  }\n  if (Math.time-g_bannerlastupdated>2.0) //2 sec.\n    onSelectionChange(); \n}\n\nfunction noun(number, word)\n{\n  var w;\n  if (number < 6)\n    w = [\"no\", \"one\", \"two\", \"three\", \"four\", \"five\"][number];\n  else\n    w = \"\" + number;\n  w += \" \" + word;\n  if (number != 1)\n    w += \"s\";\n  return w;\n}\n\nfunction onSelectionChange()\n{\n  var t;\n  if (CreatureSelection.count > 0)\n  {\n    var c = CreatureSelection.get(0);\n    t = \"This is '\" + c.name + \"'.\\n\";\n    t += \"It has \" + noun(c.numparts, \"part\") + \", \" + noun(c.numjoints, \"joint\") + \", and \" + noun(c.numneurons, \"neuron\") + \" in the brain.\";\n    t += \" And \" + int(c.energy) + \" energy units left.\";\n    t += \"\\n\" + c.info;\n  }\n  else\n  {\n    t = \"Shown creatures: \";\n    var pop=Populations[0];\n    if (pop.size > 0)\n    {\n      var i;\n      t += \"'\" + pop[0].name + \"'\";\n      for (i = 1;i < pop.size;i++)\n        t += \", '\" + pop[i].name + \"'\";\n    }\n    else\n      t += \"none\";\n  }\n  GLDisplay.banner = t;\n  g_bannerlastupdated=Math.time;\n}\n\n\n"
+  },
+  {
+    "id": "walk",
+    "_classname": "property",
+    "type": "p",
+    "name": "Show walking creatures"
+  },
+  {
+    "id": "swim",
+    "_classname": "property",
+    "type": "p",
+    "name": "Show swimming creatures"
+  }
+]

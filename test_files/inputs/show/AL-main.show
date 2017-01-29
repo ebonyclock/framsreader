@@ -1,0 +1,223 @@
+show:
+name:Creature
+expdef:standard
+code:~
+@include "AL-shared.inc"
+@include "AL-sending.inc"
+@include "AL-objects.inc"
+
+global g_floating;
+global g_floating_orient;
+global g_restore_anim;
+
+function printobj3d(o,indent)
+{
+var t="";
+for(var i=0;i<indent;i++) t+="   ";
+t+=o;
+t+=" \""+o.name+"\" "+o.material+" ("+o.children+" children) size:"+o.size;
+Simulator.print(t);
+for(var i=0;i<o.children;i++)
+   printobj3d(o[i],indent+1);
+}
+
+function genotypeByID(id)
+{
+	for(var g in GenePools[0])
+		if (g.num==id) return g;
+	return null;
+}
+
+function addDemoCreatures()
+{
+	//prepare world
+	World.wrldsiz=20;
+	World.wrldtyp=1;
+	World.wrldmap="m 3 3 555595555";
+	World.wrldwat=-10;
+	World.wrldbnd=2;//teleport
+	ExpProperties.MaxCreated=0;
+
+	//load and add to population
+	var selected_IDs=[56,58,59,60,61,62,63,64,65,73,77,79,86,87,89,91,287];
+	Simulator.import("walking.gen");
+	Populations[0].energy=0;
+	for(var count=3;count>0;count--)
+	{
+		var cr = Populations[0].add(genotypeByID(selected_IDs[Math.random(selected_IDs.size)]));
+		cr.nnenabled = 1;
+		var a=Math.rnd01*Math.pi*2;
+		cr.locationSetBboxLow(10.0+8.0*Math.cos(a)-cr.bboxSize.x/2,10.0+8.0*Math.sin(a)-cr.bboxSize.y/2, 0);
+		cr.rotate(0,0,Math.rnd01*Math.twopi);
+	}
+}
+
+function beforeLoad()
+{
+GLDisplay.back_action="";
+}
+
+function addText3D(txt,align,size,rotation)
+{
+var ret=null,newline,moretxt="",t=null,shift=0.0;
+while(txt!="")
+  {
+  newline=String.indexOf(txt,"\n");
+  if (newline>=0) {moretxt=String.substr(txt,newline+1); txt=String.substr(txt,0,newline);} else moretxt="";
+  if (t!=null) { if (ret==null) ret=GLDisplay.world3d.add(Obj3D.newEmpty()); ret.add(t); shift+=size*1.1; }
+  t=GLDisplay.world3d.add(Obj3D.newText(txt,align,-1,Matrix.newScale(size).rotate((1,0,0),1.57).rotate((0,1,0),rotation)));
+  if (shift>0) t.transform=t.transform.translate((0,0,-shift));
+  txt=moretxt;
+  }
+if (ret) {ret.add(t); return ret;} else return t;
+}
+
+function onLoad()
+{
+GLDisplay.user_interaction=2;
+GLDisplay.world_visibility=1+4;
+GLDisplay.back_action="onBack";
+ShowManager.dispinfo=0;
+
+Math.randomize();
+
+if (ShowManager.prev_show=="")
+  addDemoCreatures();
+
+loadCurrent();
+var g=GenePools[0][0];
+addText3D(g.name,0,0.5,0).position=(10,7.2,6);
+var pos=(10,7.2,5.2);
+var txt="";
+if (g.data->imported) txt="imported";
+if (g.data->edited) {if (txt!="") txt+=", "; txt+="edited";}
+if (txt!="")
+    {addText3D(txt,0,0.4,0).position=pos; pos.z-=0.6;}
+if (g.data->selections > 0)
+    {addText3D("Selective breeding:\n"+g.data->selections+" generations",0,0.4,0).position=pos; pos.z-=1;}
+if (g.data->evaluations > 0)
+    {addText3D("Evolved by evaluating\n"+g.data->evaluations+" genotypes",0,0.4,0).position=pos; pos.z-=1;}
+
+if (g.velocity!=0) addText3D("Velocity: %.6f" % g.velocity,0,0.4,0).position=(10,7.2,2.5);
+if (g.vertpos!=0) addText3D("Height: %.2f" % g.vertpos,0,0.4,0).position=(10,7.2,2);
+
+var o=Obj3D.newFromCreature(GenePools[0][0].genotype);
+var pos=(0,0,0);
+var center=o.center;
+var scale=2.5/o.size;
+center.scale(scale);
+pos.sub(center);
+var m=Matrix.newTranslation(pos);
+m=m.scale(scale);
+o.transform=m;
+g_floating_orient=Matrix.new();
+
+var anchor=Obj3D.newEmpty();
+anchor.transform=Matrix.newTranslation((10,10,4));
+g_floating=Obj3D.newEmpty();
+
+GLDisplay.world3d.add(anchor);
+anchor.add(g_floating);
+g_floating.add(o);
+
+CreatureSelection.clear();
+
+var but;
+but=GUI.newButton("AL-play","Playground");
+but.setAutolayout(0,0,0,0, 0.01,1.0-0.15-0.01, 0.3,0.15);
+
+var y=1.0;
+for(var b in [
+	["AL-edit","Edit genotype"], //"Genetic Lab"
+	["AL-biomorph","Guide evolution"], //"Evolutionary steps"
+	["AL-evol","Evolve"]]) //"Evolutionary reactor" (or "loop")
+   {
+   but=GUI.newButton(b[0],b[1]);
+   y-=0.15;
+   but.setAutolayout(0,0,0,0, 1.0-0.3-0.01,y,0.3,0.15);
+   }
+y-=0.15;
+but=GUI.newLabel("","Modify this creature:");
+but.setAutolayout(0,0,0,0, 1.0-0.3-0.01,y,0.3,0.15);
+but.align=0;
+but.valign=1;
+but.fgcolor=0xff000000;
+
+g_helptxt="""<h1>Welcome to the Artificial Life laboratory!</h1><br>
+Use buttons to visit rooms in the lab. You can guide selection of creatures, see their evolution, play with them, and, if you are really ambitious, you can modify their genes in the Genetic Lab!<br><br>Mutations in the genetic code occur randomly, so your results will be unique.""";
+
+but=GUI.newButton("share","");
+but.image="share-icon-shadow";
+but.style=1;
+but.addTo(GUI.top_right);
+
+addHelpButton(GUI.top_right);
+
+GLDisplay.skybox="whiteworld_";
+addBottleObject();
+
+TrackingCam.cam_world=0;
+
+TrackingCam.cam_change=1;
+TrackingCam.setTarget(10,10,3,7);
+TrackingCam.tick(0);
+
+TrackingCam.cam_change=2;
+TrackingCam.setTarget(10,10,3,12);
+
+g_restore_anim=0;
+
+if (Populations[0].size>0)
+   GLDisplay.desiredsimspeed = 50;
+
+g_hide_screenshot=["AL-history","AL-play","gen","helpbut","share"];
+}
+
+function onShowStep()
+{
+g_floating_orient=g_floating_orient.mul(Matrix.newRotation((Math.sin(Math.time*0.03)*0.01,Math.sin(Math.time*0.04)*0.01,Math.sin(Math.time*0.05)*0.01)));
+
+g_floating.transform=g_floating_orient.mul(Matrix.newTranslation((Math.sin(Math.time*0.21)*0.2,Math.sin(Math.time*0.23)*0.2,Math.sin(Math.time*0.09)*0.3)));
+
+var anim=Math.time;
+if ((TrackingCam.interacting==0) && (g_restore_anim==0))
+	{
+	TrackingCam.setViewDir(90.0 + 30.0 + 20.0*Math.sin(anim*0.43), 10.0 + 10.0*Math.cos(anim*0.5));
+	}
+else
+	{
+	if (g_restore_anim==0)
+		g_restore_anim=Math.time+5.0;
+	}
+if ((g_restore_anim>0) && (Math.time>g_restore_anim))
+	{
+	g_restore_anim=0;
+	}
+
+//printobj3d(GLDisplay.world3d,0);
+}
+
+function onGUIEvent(elem,arg)
+{
+if (handleHelp(elem)) return;
+if (handleSharing(elem)) return;
+
+if (String.startsWith(elem.name,"AL-"))
+	{
+	ShowManager.show=elem.name;
+	return;
+	}
+}
+
+function onBack()
+{
+if (closePopup()) return;
+GUI.setTimeout("back",1,function goUp);
+TrackingCam.cam_change=2;
+TrackingCam.setTarget(10,10,3,30);
+}
+
+function goUp()
+{
+ShowManager.show="AL-history";
+}

@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Online evolution",
+    "_classname": "show",
+    "expdef": "standard",
+    "code": "function onLoad()\n{\n\tGLDisplay.user_interaction = 2;\n\tGLDisplay.world_visibility = 1 + 4;\n\tGLDisplay.back_action = \"onBack\";\n\tShowManager.dispinfo = 0;\n\n\tvar d = File.callURL(\"http://ec.framsticks.com/direct_submit/\", null, null);\n\tif (d->ok)\n\t{\n\t\t//Simulator.print(\"content: \"+d->content);\n\t\td = String.deserialize(d->content);\n\t\tif (typeof(d) == \"Error\")\n\t\t{\n\t\t\tSimulator.print(\"Cannot parse json: \" + d);\n\t\t}\n\t\telse\n\t\t{\n\t\t\tvar li = GUI.newList(\"pools\");\n\t\t\tli.align = 1;\n\t\t\tli.valign = 0;\n\t\t\tli.setAutolayout(0, 0, 0, 0, 0.1, 0.1, 0.8, 0.8);\n\t\t\tli.rowheight = (GLDisplay.size_x + GLDisplay.size_y) / 15;\n\n\t\t\tfor (var row in d->data)\n\t\t\t{\n\t\t\t\t//Simulator.print(row);\n\t\t\t\tli.addItem(\"Environment and fitness: \" + row->env_name + \"\\nGene pool: \" + row->pool_name, \"menu_show_mixed_world\");\n\t\t\t}\n\t\t}\n\t}\n}\n\nfunction onGUIEvent(elem, arg)\n{\n}\n\nfunction onBack()\n{\n\tShowManager.show = \"AL-top\";\n}\n\n"
+  }
+]

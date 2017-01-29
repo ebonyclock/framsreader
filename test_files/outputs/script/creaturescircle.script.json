@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Creatures circle",
+    "_classname": "script",
+    "code": "function main()\n{\n  var count = Populations[0].size;\n  if (count <= 0)\n  {\n    Simulator.message(\"No living creatures to arrange!\", 2);\n    return ;\n  }\n\n  var tallest=Populations[0][0];\n  for (var cr in Populations[0])\n     if (cr.vertpos > tallest.vertpos)\n        tallest = cr;\n\n  if (tallest.vertpos <= 0.0)\n    Simulator.message(\"Vertical positions are zero, are you sure you simulated the creatures for some time?\", 1);\n  else\n    Simulator.print(tallest.name + \" is the tallest.\");\n\n  var halfwrldsiz = World.wrldsiz / 2;\n  tallest.locationSetBboxLow(halfwrldsiz - (tallest.bboxSize.x / 2), halfwrldsiz - (tallest.bboxSize.y / 2), tallest.bboxLow.z);\n\n  var x, y, i=0;\n  for (var cr in Populations[0])\n  {\n    if (cr==tallest) continue;\n\n    x = Math.sin(Math.twopi * i / (count - 1)) * halfwrldsiz + halfwrldsiz;\n    y = Math.cos(Math.twopi * i / (count - 1)) * halfwrldsiz + halfwrldsiz;\n\n    cr.locationSetBboxLow(x - (cr.bboxSize.x / 2), y - (cr.bboxSize.y / 2), cr.bboxLow.z);\n    i++;\n  }\n}\n",
+    "help": "Arranges living creatures (first population) in a circle, tallest in the middle\n(the tallest one is selected based on the vertical position which should already be measured)"
+  }
+]

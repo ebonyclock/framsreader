@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Gallery",
+    "_classname": "script",
+    "code": "function main()\n{\n  var n = GenePools[0].size;\n  if (n == 0)\n  {\n    Simulator.message(\"This script needs some genotypes in the first gene pool.\", 1);\n    return ;\n  }\n  var side = int(Math.sqrt(n) + 0.999);\n  Simulator.print(\"There are \" + n + \" genotype(s), it will be \" + side + \" by \" + side + \" grid\");\n\n  var spacing = World.wrldsiz/(side+1); // grid spacing\n  var g = 0;\n  for (var i = 1;i <= side;i++)\n    for (var j = 1;j <= side;j++)\n    {\n      if (g >= GenePools[0].size)\n        return ;\n      var cr=Populations[0].add(GenePools[0][g]);\n      var x = spacing * i;\n      var y = spacing * j;\n      var z = WorldMap.getHeight(x, y);\n      cr.locationSetBboxLow(x - cr.bboxSize.x / 2, y - cr.bboxSize.y / 2, z);\n      g++;\n    }\n}\n",
+    "help": "Arranges creatures from the first gene pool in a grid"
+  }
+]

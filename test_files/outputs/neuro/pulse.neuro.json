@@ -1,0 +1,46 @@
+[
+  {
+    "prefinputs": 1,
+    "description": "Generates Dirac pulse train. Supports randomness (\"rand\" parameter) and frequency controlled by input.",
+    "name": "Pulse",
+    "_classname": "class",
+    "prefoutput": 1,
+    "code": "\n//Note 1: this neuron is discrete (integer). If you want fractional values of parameters working properly,\n//a continuous version should be developed.\n//Note 2: negative values of NeuroProperties.period mean Poissonian process; if used, NeuroProperties.rand is ignored and \"frequency\" controlled by input is not supported.\n\nfunction setNextRand()\n{\n  NeuroProperties.nextrand = Math.random(NeuroProperties.rand+1)-NeuroProperties.rand/2;\n   //Math.rndGauss(0,NeuroProperties.rand);\n  //or (continuous, to do) Math.rndUni(-NeuroProperties.rand/2,NeuroProperties.rand/2);\n}\n\nfunction init()\n{\n  if (NeuroProperties.period>=0)\n  {\n    NeuroProperties.counter=Math.random(NeuroProperties.period);\n    if (NeuroProperties.rand%2>0 && NeuroProperties.rand>0) NeuroProperties.rand++; //make even for symmetry when dividing by two\n    setNextRand();\n  }\n}\n\nfunction go()\n{\n  if (NeuroProperties.period>=0) //random time of next pulse\n  {\n    var dt=1.0+Neuro.weightedInputSum; //inputs=-1 stop generator\n    if (dt<0) dt=0; //going \"back\" forbidden\n    NeuroProperties.counter+=dt;\n    if (NeuroProperties.counter>=NeuroProperties.period+NeuroProperties.nextrand)\n    {\n      Neuro.state = NeuroProperties.ampl;\n      NeuroProperties.counter=0;\n      setNextRand();\n    } else\n      Neuro.state = 0;\n  } else //negative? poisson distribution\n  {\n    Neuro.state = NeuroProperties.ampl * (Math.random(-NeuroProperties.period)==0); //in each step, state==amplitude with probability 1/n, n=-NeuroProperties.period\n  }\n}\n",
+    "icon": "35,6,3,25,0,25,100,75,50,25,0,1,75,50,100,50,1,30,60,60,60,1,35,60,35,40,1,45,60,45,40,1,55,60,55,40",
+    "longname": "Impulse generator"
+  },
+  {
+    "id": "period",
+    "_classname": "property",
+    "help": "Use a negative value to set ratio for Poissonian process",
+    "type": "d -100000 1000000 50",
+    "name": "Period"
+  },
+  {
+    "id": "rand",
+    "_classname": "property",
+    "type": "d 0 1000000 0",
+    "name": "Randomness"
+  },
+  {
+    "id": "ampl",
+    "_classname": "property",
+    "help": "Amplitude of pulses",
+    "type": "f 0 100 1",
+    "name": "Amplitude"
+  },
+  {
+    "id": "counter",
+    "_classname": "property",
+    "flags": 32,
+    "type": "d",
+    "name": "Counter (private)"
+  },
+  {
+    "id": "nextrand",
+    "_classname": "property",
+    "flags": 32,
+    "type": "d",
+    "name": "Next event (private)"
+  }
+]
