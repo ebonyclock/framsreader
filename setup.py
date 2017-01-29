@@ -6,14 +6,11 @@ from setuptools import setup
 
 setup(
     name='framsreader',
-    version='0.1.0',
+    version='0.1.1',
     description='Files parser for Framsticks.',
     long_description="Files parser for Framsticks.",
     author='Michał Kempka',
     author_email='kempka.michal@gmail.com',
-
-    install_requires=['numpy'],
-    setup_requires=['numpy'],
     packages=['framsreader'],
     package_data={'framsreader': ['framscript.xml']},
     classifiers=[
@@ -24,7 +21,7 @@ setup(
         # Development Status :: 5 - Production/Stable
         # Development Status :: 6 - Mature
         # Development Status :: 7 - Inactive
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
         'License :: OSI Approved :: MIT License',
