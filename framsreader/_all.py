@@ -16,15 +16,14 @@ _ESCAPED_TAB_REGEX = '\\\\t'
 _ESCAPED_NEWLINE_REGEX = '\\\\n'
 _ESCAPED_TYLDA_REGEX = '\\\\~'
 _FRAMSCRIPT_XML_PATH = os.path.join((os.path.dirname(__file__)), "framscript.xml")
-_AVAILABLE_CONTEXTS = ["expdef file", "show file", "style file", "neuro file", "script file", "gen file", "sim file",
-                       "expt file"]
 
 # Messages:
 _NO_FILE_EXTENSION_WARNING = "No file extension found. Setting default context."
 _UNSUPPORTED_EXTENSION_WARNING = "Unsupported file extension: '{}'. Setting default context."
+_UNSUPPORTED_CONTEXT_WARNING = "Unsupported context: '{}'. Setting default context."
 _UNEXPECTED_KEY_WARNING = "Unexpected key encountered: key: '{}', class: '{}', context: '{}' )"
 _NOT_A_NUMBER_ERROR = "Expression cannot be parsed to a number: {}"
-_MULTILINE_NOT_CLOSED_ERROR = "Multiline property for key: '{}' was not closed with '~'."
+_MULTILINE_NOT_CLOSED_WARNING = "Multiline property for key: '{}' was not closed with '~'."
 _STRING_NOT_CLOSED_ERROR = "String expression not closed with '~'"
 _EMPTY_SERIALIZED_ERROR = "Empty value for '@Serialized' not allowed."
 _NO_OBJECT_ERROR = "No object defined for the current line."
@@ -38,12 +37,15 @@ _MAX_VAL_EXCEEDED_ERROR = "Maximum value allowed: {}, got: {}"
 def _create_specs_from_xml():
     specs = {}
     root = _et.parse(_FRAMSCRIPT_XML_PATH).getroot()
+    contexts = {"sim file", "gen file"}
     assert root.tag == "framscript"
     for child in root:
         assert child.tag == "type"
         context = child.attrib["context"]
+        contexts.add(context)
         classname = child.attrib["name"]
         context_key = (context, classname)
+
         if (context, classname) not in specs:
             specs[(context, classname)] = dict()
 
@@ -60,17 +62,18 @@ def _create_specs_from_xml():
             else:
                 continue
             if "min" in element.attrib:
-                spec["min"] = element.attrib["min"]
+                spec["min"] = spec["dtype"](element.attrib["min"])
             if "max" in element.attrib:
-                spec["max"] = element.attrib["max"]
+                spec["max"] = spec["dtype"](element.attrib["max"])
             # # is default needed?
             # if "default" in element.attrib:
             #     spec["default"] = element.attrib["default"]
             specs[context_key][key] = spec
-    return specs
+
+    return specs, contexts
 
 
-_specs = _create_specs_from_xml()
+_specs, _contexts = _create_specs_from_xml()
 
 
 def _create_generic_parser(dtype, min=None, max=None):
@@ -339,9 +342,20 @@ def deserialize(expression):
     return main_object
 
 
-def loads(s, context=None, autoparse=True):
-    assert isinstance(s, str)
-    lines = s.split("\n")
+def loads(input_string, context=None, autoparse=True):
+    """
+    Parses string in Framsticks' format to a list of dictionaries.
+    :param input_string: String to parse.
+    :param context: Context of parsing compliant with 'framscript.xml' contextx e.g. 'expdef file'.
+    :param autoparse: If true numbers will be parsed automatically if possible.
+    If false every field will be treated as a string.
+    :return: A list of dictionaries representing Framstick objects.
+    """
+    assert isinstance(input_string, str)
+    if context is not None and context not in _contexts:
+        warnings.warn(_UNSUPPORTED_CONTEXT_WARNING.format(context))
+
+    lines = input_string.split("\n")
     multiline_value = None
     multiline_key = None
     current_object = None
@@ -405,11 +419,12 @@ def loads(s, context=None, autoparse=True):
                         current_object[key] = value
 
         except ValueError:
-            raise ValueError()
             parsing_error = True
-            break
+
     if multiline_key is not None:
-        raise ValueError(_MULTILINE_NOT_CLOSED_ERROR.format(multiline_key))
+        current_object[multiline_key] = multiline_value
+        warnings.warn(_MULTILINE_NOT_CLOSED_WARNING.format(multiline_key))
+
     if parsing_error:
         raise ValueError("Parsing error. Incorrect syntax in line {}:\n{}".format(line_num, line))
 
@@ -417,12 +432,21 @@ def loads(s, context=None, autoparse=True):
 
 
 def load(filename, context=None, autoparse=True):
+    """
+    Parses the file with a given filename to a list of dictionaries.
+    :param filename: Name of the file to parse.
+    :param context: Context of parsing compliant with 'framscript.xml' contextx e.g. 'expdef file'.
+    If context is left emtpy it will be inferred from the file's extension/
+    :param autoparse: If true numbers will be parsed automatically if possible.
+        If false every field will be treated as a string.
+        :return: A list of dictionaries representing Framstick objects.
+    """
     file = open(filename)
     if context is None:
         try:
             _, extension = filename.split(".")
             context = extension + " file"
-            if context not in _AVAILABLE_CONTEXTS:
+            if context not in _contexts:
                 context = None
                 warnings.warn(_UNSUPPORTED_EXTENSION_WARNING.format(extension))
         except RuntimeError:
