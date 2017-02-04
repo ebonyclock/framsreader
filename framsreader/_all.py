@@ -32,6 +32,7 @@ _REFERENCE_FORMAT_ERROR = "reference sign '^' should be followed by an integer. 
 _COLON_EXPECTED_ERROR = "Colon ':' was expected. Got: {}"
 _MIN_VAL_EXCEEDED_ERROR = "Minimum value allowed: {}, got: {}"
 _MAX_VAL_EXCEEDED_ERROR = "Maximum value allowed: {}, got: {}"
+_NONEMPTY_CLASSNAME = "There should be no string after obejct's classname."
 
 
 def _create_specs_from_xml():
@@ -362,8 +363,9 @@ def loads(input_string, context=None, autoparse=True):
     objects = []
     parsing_error = False
     class_name = None
-    for line_num, line in enumerate(lines):
-        try:
+    try:
+        for line_num, line in enumerate(lines):
+
             if multiline_key is not None:
                 endmatch = _re.search(_TYLDA_REGEX, line)
                 if endmatch is not None:
@@ -398,9 +400,8 @@ def loads(input_string, context=None, autoparse=True):
                 else:
                     if ":" in line:
                         class_name, suffix = line.split(":", 1)
-                        # TODO maybe raise error when something's after classname
-                        # if suffix !="":
-                        #     raise ValueError()
+                        if suffix != "":
+                            raise ValueError(_NONEMPTY_CLASSNAME)
                         current_object = {"_classname": class_name}
                         objects.append(current_object)
                         continue
@@ -417,16 +418,17 @@ def loads(input_string, context=None, autoparse=True):
                     else:
                         value = parse_value(value, classname=class_name, key=key, context=context, autoparse=autoparse)
                         current_object[key] = value
-
-        except ValueError:
-            parsing_error = True
+    except ValueError as ex:
+        parsing_error = True
+        error_msg = str(ex)
 
     if multiline_key is not None:
         current_object[multiline_key] = multiline_value
         warnings.warn(_MULTILINE_NOT_CLOSED_WARNING.format(multiline_key))
 
     if parsing_error:
-        raise ValueError("Parsing error. Incorrect syntax in line {}:\n{}".format(line_num, line))
+        error_msc = "Parsing error. Incorrect syntax in line {}:\n{}\n{}".format(line_num, error_msg, line)
+        raise ValueError(error_msc)
 
     return objects
 
