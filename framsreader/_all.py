@@ -343,12 +343,12 @@ def deserialize(expression):
     return main_object
 
 
-def loads(input_string, context=None, autoparse=True):
+def loads(input_string, context=None, autocast=True):
     """
     Parses string in Framsticks' format to a list of dictionaries.
     :param input_string: String to parse.
     :param context: Context of parsing compliant with 'framscript.xml' contextx e.g. 'expdef file'.
-    :param autoparse: If true numbers will be parsed automatically if possible.
+    :param autocast: If true numbers will be parsed automatically if possible.
     If false every field will be treated as a string.
     :return: A list of dictionaries representing Framstick objects.
     """
@@ -416,7 +416,7 @@ def loads(input_string, context=None, autoparse=True):
                         multiline_value = ""
                         multiline_key = key
                     else:
-                        value = parse_value(value, classname=class_name, key=key, context=context, autoparse=autoparse)
+                        value = parse_value(value, classname=class_name, key=key, context=context, autoparse=autocast)
                         current_object[key] = value
     except ValueError as ex:
         parsing_error = True
@@ -433,13 +433,13 @@ def loads(input_string, context=None, autoparse=True):
     return objects
 
 
-def load(filename, context=None, autoparse=True):
+def load(filename, context=None, autocast=True):
     """
     Parses the file with a given filename to a list of dictionaries.
     :param filename: Name of the file to parse.
     :param context: Context of parsing compliant with 'framscript.xml' contextx e.g. 'expdef file'.
     If context is left emtpy it will be inferred from the file's extension/
-    :param autoparse: If true numbers will be parsed automatically if possible.
+    :param autocast: If true numbers will be parsed automatically if possible.
         If false every field will be treated as a string.
         :return: A list of dictionaries representing Framstick objects.
     """
@@ -456,4 +456,4 @@ def load(filename, context=None, autoparse=True):
             context = None
     s = file.read()
     file.close()
-    return loads(s, context=context, autoparse=autoparse)
+    return loads(s, context=context, autocast=autocast)
