@@ -111,7 +111,7 @@ def _str_to_number(s):
 
 def parse_value(value, classname=None, key=None, context=None, autoparse=True):
     assert isinstance(value, str)
-
+    value = value.strip()
     # TODO maybe check 'Global context' as well?
     if (context, classname) in _specs:
         spec = _specs[(context, classname)]
@@ -131,7 +131,7 @@ def parse_value(value, classname=None, key=None, context=None, autoparse=True):
             return parsed_number
         except ValueError:
             pass
-    return value.strip()
+    return value
 
 
 def _extract_string(exp):
