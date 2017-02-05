@@ -6,7 +6,7 @@ from setuptools import setup
 
 setup(
     name='framsreader',
-    version='0.1.1',
+    version='0.1.2',
     description='Files parser for Framsticks.',
     long_description="Files parser for Framsticks.",
     author='Michał Kempka',
