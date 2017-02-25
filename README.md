@@ -1,4 +1,4 @@
-# Framsreader
+# Framsreader (moved to [Bitbucket](https://bitbucket.org/ebonyclock/framsreader))
 Python3 file reader for [Framsticks](http://www.framsticks.com/)
 
 ## Installation:
